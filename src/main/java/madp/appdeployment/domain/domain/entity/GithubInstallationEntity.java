@@ -19,7 +19,7 @@ import madp.appdeployment.global.entity.BaseEntity;
 @Table(name = "github_installation")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class GitHubInstallationEntity extends BaseEntity {
+public class GithubInstallationEntity extends BaseEntity {
 
     @Column(name = "installation_id", nullable = false, unique = true)
     private Long installationId;
@@ -35,7 +35,7 @@ public class GitHubInstallationEntity extends BaseEntity {
     private String avatarUrl; // Organization 또는 User 프로필 사진 URL
 
     @Builder
-    public GitHubInstallationEntity(Long installationId, Long accountId, GitHubAccountType accountType, String avatarUrl) {
+    public GithubInstallationEntity(Long installationId, Long accountId, GitHubAccountType accountType, String avatarUrl) {
         validateFields(installationId, accountId, accountType, avatarUrl);
         
         this.installationId = installationId;
