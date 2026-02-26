@@ -15,10 +15,10 @@ import madp.appdeployment.domain.exception.InstallationNotFoundException;
 import madp.appdeployment.domain.exception.AppDeploymentNotFoundException;
 import madp.appdeployment.domain.infrastructure.client.UserClient;
 import madp.appdeployment.domain.infrastructure.client.response.UserProfileResponseDto;
-import madp.appdeployment.domain.infrastructure.github.GithubAppTokenManager;
-import madp.appdeployment.domain.infrastructure.github.client.GithubClient;
-import madp.appdeployment.domain.infrastructure.github.client.response.GithubFileContentResponse;
-import madp.appdeployment.domain.infrastructure.github.client.response.GithubMemberResponse;
+import madp.appdeployment.domain.infrastructure.github.token.GithubAppTokenManager;
+import madp.appdeployment.domain.infrastructure.client.GithubClient;
+import madp.appdeployment.domain.infrastructure.client.response.GithubFileContentResponse;
+import madp.appdeployment.domain.infrastructure.client.response.GithubMemberResponse;
 import madp.appdeployment.domain.presentation.dto.request.GithubRepositoryRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.GithubWebhookInstallationRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.GithubWebhookOrganizationRequestDto;
@@ -212,6 +212,7 @@ public class GithubWebhookService {
         githubAccountUserRepository.deleteByGithubAccountIdAndGithubUserId(githubWebhookOrganizationRequestDto.organizationId(), githubWebhookOrganizationRequestDto.githubId());
     }
 
+    @Transactional(readOnly = true)
     public void handlePushEvent(GithubWebhookPushRequestDto pushPayload) {
         // Repository ID로 AppDeploymentEntity 조회 (여러 deployment가 같은 repository 사용 가능)
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findByGithubRepository_RepositoryId(pushPayload.repository().id()).orElseThrow(AppDeploymentNotFoundException::new);

@@ -49,37 +49,4 @@ public class GithubApiController {
         // 3. Installation 없으면 GitHub App 설치 안내
 
     }
-//
-//    @Async
-//    public void processWebhookAsync(String githubEvent, String signature, String payload) {
-//        switch (githubEvent) {
-//            case "installation":
-//               handleInstallationEvent(signature, payload);
-//               break;
-//            case "push":
-//                handlePushEvent(signature, payload);
-//                break;
-//            default:
-//                log.info("Unhandled GitHub event: {}", githubEvent);
-//        }
-//    }
-//
-//    private void handleInstallationEvent(String signature, String payload) {
-//        log.info("Processing installation event");
-//        // TODO: installation webhook 처리 로직 구현
-//        // 1. 서명 검증 (GitHub App webhook secret 사용)
-//        // 2. 이벤트 타입 확인 (created/deleted/repositories)
-//        // 3. GitHubInstallationEntity 저장/업데이트/삭제
-//    }
-//
-//    private void handlePushEvent(String signature, String payload) {
-//        log.info("Processing push event");
-//        // TODO: push webhook 처리 로직 구현
-//        // 1. payload에서 repository 정보 파싱
-//        // 2. repository로 AppDeployment 조회
-//        // 3. 서명 검증 (해당 deployment의 webhookSecret 사용)
-//        // 4. Branch 필터링
-//        // 5. 상태 체크 (BUILDING 중복 방지)
-//        // 6. Jenkins 트리거
-//    }
 }

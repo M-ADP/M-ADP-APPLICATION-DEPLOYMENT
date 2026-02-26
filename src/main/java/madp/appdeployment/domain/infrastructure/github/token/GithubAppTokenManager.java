@@ -1,9 +1,9 @@
-package madp.appdeployment.domain.infrastructure.github;
+package madp.appdeployment.domain.infrastructure.github.token;
 
 import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
 import madp.appdeployment.domain.exception.GithubPrivateKeyInvalidException;
-import madp.appdeployment.domain.infrastructure.github.client.GithubClient;
+import madp.appdeployment.domain.infrastructure.client.GithubClient;
 import madp.appdeployment.global.properties.GithubWebhookProperties;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;

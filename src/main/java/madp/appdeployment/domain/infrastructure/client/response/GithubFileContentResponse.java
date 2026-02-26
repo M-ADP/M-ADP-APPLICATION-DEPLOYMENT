@@ -1,4 +1,4 @@
-package madp.appdeployment.domain.infrastructure.github.client.response;
+package madp.appdeployment.domain.infrastructure.client.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

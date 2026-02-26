@@ -1,9 +1,9 @@
-package madp.appdeployment.domain.infrastructure.github.client;
+package madp.appdeployment.domain.infrastructure.client;
 
-import madp.appdeployment.domain.infrastructure.github.client.fallback.GithubClientFallback;
-import madp.appdeployment.domain.infrastructure.github.client.response.GithubAccessTokenResponse;
-import madp.appdeployment.domain.infrastructure.github.client.response.GithubFileContentResponse;
-import madp.appdeployment.domain.infrastructure.github.client.response.GithubMemberResponse;
+import madp.appdeployment.domain.infrastructure.client.fallback.GithubClientFallback;
+import madp.appdeployment.domain.infrastructure.client.response.GithubAccessTokenResponse;
+import madp.appdeployment.domain.infrastructure.client.response.GithubFileContentResponse;
+import madp.appdeployment.domain.infrastructure.client.response.GithubMemberResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 

@@ -9,6 +9,9 @@ import java.util.Optional;
 
 @Repository
 public interface AppDeploymentRepository extends JpaRepository<AppDeploymentEntity, Long> {
-    @Query("select ad from AppDeploymentEntity ad where ad.githubRepository.repositoryId = :repositoryId")
+    @Query("select ad from AppDeploymentEntity ad " +
+           "join fetch ad.githubRepository gr " +
+           "join fetch gr.installation " +
+           "where gr.repositoryId = :repositoryId")
     Optional<AppDeploymentEntity> findByGithubRepository_RepositoryId(Long repositoryId);
 }

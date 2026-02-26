@@ -1,10 +1,10 @@
-package madp.appdeployment.domain.infrastructure.github.client.fallback;
+package madp.appdeployment.domain.infrastructure.client.fallback;
 
 import madp.appdeployment.domain.exception.GithubServiceUnavailableException;
-import madp.appdeployment.domain.infrastructure.github.client.GithubClient;
-import madp.appdeployment.domain.infrastructure.github.client.response.GithubAccessTokenResponse;
-import madp.appdeployment.domain.infrastructure.github.client.response.GithubFileContentResponse;
-import madp.appdeployment.domain.infrastructure.github.client.response.GithubMemberResponse;
+import madp.appdeployment.domain.infrastructure.client.GithubClient;
+import madp.appdeployment.domain.infrastructure.client.response.GithubAccessTokenResponse;
+import madp.appdeployment.domain.infrastructure.client.response.GithubFileContentResponse;
+import madp.appdeployment.domain.infrastructure.client.response.GithubMemberResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

@@ -2,7 +2,6 @@ package madp.appdeployment.domain.domain.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import madp.appdeployment.domain.exception.AccountTypeNotFoundException;
 
 /**
  * GitHub User 타입
@@ -17,13 +16,4 @@ public enum GithubUserType {
     BOT("Bot");
 
     private final String userType;
-
-    public static GithubUserType from(String userType) {
-        for (GithubUserType type : GithubUserType.values()) {
-            if (type.userType.equals(userType)) {
-                return type;
-            }
-        }
-        throw new AccountTypeNotFoundException(userType);
-    }
 }
