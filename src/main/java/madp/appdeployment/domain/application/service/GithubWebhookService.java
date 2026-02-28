@@ -13,11 +13,12 @@ import madp.appdeployment.domain.domain.repository.GithubInstallationRepository;
 import madp.appdeployment.domain.domain.repository.GithubAccountUserRepository;
 import madp.appdeployment.domain.exception.InstallationNotFoundException;
 import madp.appdeployment.domain.exception.AppDeploymentNotFoundException;
+import madp.appdeployment.domain.infrastructure.client.JenkinsClient;
 import madp.appdeployment.domain.infrastructure.client.UserClient;
+import madp.appdeployment.domain.infrastructure.client.request.JenkinsDeploymentRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.UserProfileResponseDto;
 import madp.appdeployment.domain.infrastructure.github.token.GithubAppTokenManager;
 import madp.appdeployment.domain.infrastructure.client.GithubClient;
-import madp.appdeployment.domain.infrastructure.client.response.GithubFileContentResponse;
 import madp.appdeployment.domain.infrastructure.client.response.GithubMemberResponse;
 import madp.appdeployment.domain.presentation.dto.request.GithubRepositoryRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.GithubWebhookInstallationRequestDto;
@@ -34,8 +35,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class GithubWebhookService {
-    private static final String DOCKERFILE_PATH = "Dockerfile";
-    
     private final GithubInstallationRepository githubInstallationRepository;
     private final GithubAllowedRepoRepository githubAllowedRepoRepository;
     private final AppDeploymentRepository appDeploymentRepository;
@@ -43,6 +42,7 @@ public class GithubWebhookService {
     private final UserClient userClient;
     private final GithubAppTokenManager githubAppTokenManager;
     private final GithubClient githubClient;
+    private final JenkinsClient jenkinsClient;
 
     @Transactional
     public void installGithubApp(GithubWebhookInstallationRequestDto githubWebhookInstallationRequestDto) {
@@ -219,19 +219,18 @@ public class GithubWebhookService {
 
         if(!pushPayload.isBranch(appDeploymentEntity.getGithubBranch())) return;
 
-        String installationAccessToken = githubAppTokenManager.getInstallationAccessToken(
-                appDeploymentEntity.getGithubRepository().getInstallation().getInstallationId().toString());
-        
-        GithubFileContentResponse githubFileContentResponse = githubClient.getFileContent(
-                pushPayload.getOwner(),
-                pushPayload.getRepoName(),
-                DOCKERFILE_PATH,
-                installationAccessToken,
-                pushPayload.getBranchName()
-        );
+        String imageName = "repo-" + pushPayload.repository().id();
+
+        JenkinsDeploymentRequestDto jenkinsDeploymentRequestDto = JenkinsDeploymentRequestDto.builder()
+                .repositoryId(pushPayload.repository().id())
+                .branch(pushPayload.getBranchName())
+                .imageName(imageName)
+                .repositoryFullName(pushPayload.repository().fullName())
+                .build();
+
+        jenkinsClient.triggerJenkins(jenkinsDeploymentRequestDto);
 
         appDeploymentEntity.updateStatus(AppDeploymentStatus.DEPLOYING);
 
-        // TODO: Resource Server Request using githubFileContentResponse
     }
 }

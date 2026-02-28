@@ -4,7 +4,6 @@ import madp.appdeployment.global.enums.Role;
 import madp.appdeployment.global.filter.MadpUserInfoExtractorFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -20,7 +19,6 @@ import tools.jackson.databind.ObjectMapper;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfiguration {
-    private static final String[] excludedPaths = {"/actuator/health", "/github/webhook"};
 
     @Bean
     public PathMatcher pathMatcher() {return new AntPathMatcher();}
@@ -34,20 +32,14 @@ public class SecurityConfiguration {
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
+                .cors(AbstractHttpConfigurer::disable)
                 .sessionManagement((session) -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .anonymous(anonymous -> anonymous
                         .principal(Role.GUEST.name())
                         .authorities(Role.GUEST.getValue())
                 )
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/github/webhook", "/apps", "/apps/github").permitAll()
-                        .requestMatchers("/login").denyAll()
-                        .anyRequest().denyAll()
-                )
-                .addFilterAfter(new MadpUserInfoExtractorFilter(pathMatcher(), excludedPaths), SecurityContextHolderFilter.class);
+                .addFilterAfter(new MadpUserInfoExtractorFilter(), SecurityContextHolderFilter.class);
 
         return http.build();
     }
