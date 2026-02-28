@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: madp-appdeployment-prod
+
+  # MySQL Docker 컨테이너 연결
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  # Redis Docker 컨테이너 연결
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+github:
+  webhook:
+    private-key: ${GITHUB_PRIVATE_KEY}
+    app-id: ${GITHUB_APP_ID}
+    webhook-secret: ${GITHUB_SECRET}
