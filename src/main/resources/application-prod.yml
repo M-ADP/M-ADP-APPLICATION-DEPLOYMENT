@@ -20,6 +20,31 @@ spring:
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
 
+  cloud:
+    openfeign:
+      client:
+        config:
+          user-client:
+            url: ${USER_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
+          project-client:
+            url: ${PROJECT_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
+          resource-client:
+            url: ${RESOURCE_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
+          jenkins-client:
+            url: ${JENKINS_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
+          github-client:
+            url: ${GITHUB_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
+
 github:
   webhook:
     private-key: ${GITHUB_PRIVATE_KEY}

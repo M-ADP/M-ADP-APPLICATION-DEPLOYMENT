@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(
         name = "project-client",
-        url = "http://localhost:8082/v1", // 나중에 배포 주소로 바꿀 예정
         fallback = ProjectClientFallback.class,
         configuration = InternalServiceCommunicationConfiguration.class
 )

@@ -11,7 +11,6 @@ import java.util.List;
 
 @FeignClient(
         name = "github-client",
-        url = "https://api.github.com",
         fallback = GithubClientFallback.class
 )
 public interface GithubClient {

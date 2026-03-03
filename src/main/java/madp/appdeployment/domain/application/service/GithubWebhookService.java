@@ -230,7 +230,7 @@ public class GithubWebhookService {
 
         jenkinsClient.triggerJenkins(jenkinsDeploymentRequestDto);
 
-        appDeploymentEntity.updateStatus(AppDeploymentStatus.DEPLOYING);
+        appDeploymentEntity.updateStatus(AppDeploymentStatus.BUILDING);
 
     }
 }
