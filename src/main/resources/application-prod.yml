@@ -1,6 +1,9 @@
 spring:
   application:
     name: madp-appdeployment-prod
+  config:
+    import:
+      - file:/vault/secrets/.env[.properties]
 
   # MySQL Docker 컨테이너 연결
   datasource:
