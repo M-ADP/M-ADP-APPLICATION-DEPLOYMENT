@@ -51,6 +51,9 @@ public class AppDeploymentEntity extends BaseEntity {
     @Column(name = "image")
     private String image;
 
+    @Column(name = "version")
+    private Integer currentVersion;
+
     @Builder
     public AppDeploymentEntity(String name, String projectId, ResourceInfo resourceInfo, Integer port) {
         validateFields(name, projectId, resourceInfo, port);
@@ -63,6 +66,11 @@ public class AppDeploymentEntity extends BaseEntity {
         this.port = port;
         this.status = AppDeploymentStatus.PENDING;
         this.image = null;
+        this.currentVersion = 0;
+    }
+
+    public void upgradeVersion() {
+        this.currentVersion++;
     }
 
     public void uploadGithubInfo(String branch, GithubAllowedRepoEntity githubAllowedRepoEntity) {

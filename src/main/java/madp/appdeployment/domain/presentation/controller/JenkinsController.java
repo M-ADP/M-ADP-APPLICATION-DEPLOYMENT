@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import madp.appdeployment.domain.application.service.JenkinsService;
 import madp.appdeployment.domain.presentation.dto.request.JenkinsCallBackRequestDto;
+import madp.appdeployment.domain.presentation.dto.request.JenkinsSuccessTriggerRequestDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,8 +16,8 @@ public class JenkinsController {
     private final JenkinsService jenkinsService;
 
     @PostMapping("/callback/success")
-    public ResponseEntity<Void> callBackSuccess(@RequestBody @Valid JenkinsCallBackRequestDto jenkinsCallBackRequestDto) {
-        jenkinsService.successTrigger(jenkinsCallBackRequestDto.repositoryId());
+    public ResponseEntity<Void> callBackSuccess(@RequestBody @Valid JenkinsSuccessTriggerRequestDto jenkinsSuccessTriggerRequestDto) {
+        jenkinsService.successTrigger(jenkinsSuccessTriggerRequestDto);
         return ResponseEntity.noContent().build();
     }
 

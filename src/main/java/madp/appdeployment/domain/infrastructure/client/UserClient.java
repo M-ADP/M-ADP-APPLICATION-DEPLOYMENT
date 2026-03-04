@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @FeignClient(
         name = "user-client",
-        url = "http://localhost:8081/v1", // 나중에 배포 주소로 바꿀 예정
         fallback = UserClientFallback.class,
         configuration = InternalServiceCommunicationConfiguration.class
 )
