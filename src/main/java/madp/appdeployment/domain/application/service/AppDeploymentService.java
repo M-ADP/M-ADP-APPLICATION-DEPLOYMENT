@@ -36,7 +36,7 @@ public class AppDeploymentService {
 
     @Transactional
     public void createAppDeployment(CreateAppDeploymentRequestDto createAppDeploymentRequestDto) {
-        if(!projectClient.getProjectAvailable(createAppDeploymentRequestDto.projectId()).status())
+        if(!projectClient.getProjectOwner(createAppDeploymentRequestDto.projectId()).status())
             throw new ProjectAccessDeniedException();
 
         ResourceInfo resourceInfo = ResourceInfo.builder()
@@ -60,7 +60,7 @@ public class AppDeploymentService {
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(updateGithubInfoRequestDto.appDeploymentId())
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
-        if(!projectClient.getProjectAvailable(appDeploymentEntity.getProjectId()).status())
+        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).status())
             throw new ProjectAccessDeniedException();
 
         String repositoryFullName = updateGithubInfoRequestDto.owner() + "/" + updateGithubInfoRequestDto.repository();
