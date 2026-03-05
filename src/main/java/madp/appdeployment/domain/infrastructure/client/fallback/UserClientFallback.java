@@ -3,13 +3,14 @@ package madp.appdeployment.domain.infrastructure.client.fallback;
 import madp.appdeployment.domain.exception.UserServiceUnavailableException;
 import madp.appdeployment.domain.infrastructure.client.UserClient;
 import madp.appdeployment.domain.infrastructure.client.response.UserProfileResponseDto;
+import madp.appdeployment.global.presentation.response.dto.ApiResponseDto;
 import org.springframework.stereotype.Component;
 
 @Component
 public class UserClientFallback implements UserClient {
 
     @Override
-    public UserProfileResponseDto getUserProfile() {
+    public ApiResponseDto<UserProfileResponseDto> getUserProfile() {
         throw new UserServiceUnavailableException();
     }
 }
