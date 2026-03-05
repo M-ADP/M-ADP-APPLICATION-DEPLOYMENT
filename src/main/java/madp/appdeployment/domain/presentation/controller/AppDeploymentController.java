@@ -7,6 +7,7 @@ import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentReq
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
+import madp.appdeployment.global.presentation.response.dto.ApiResponseDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -37,25 +38,40 @@ public class AppDeploymentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AppDeploymentStatusResponseDto>> getAppDeploymentsByProjectId(
+    public ResponseEntity<ApiResponseDto<List<AppDeploymentStatusResponseDto>>> getAppDeploymentsByProjectId(
             @RequestParam(value = "project_id") String projectId
     ) {
-        return ResponseEntity.ok(appDeploymentService.getAppDeploymentsByProjectId(projectId));
+        return ResponseEntity.ok(
+                ApiResponseDto.of(
+                        "앱 배포 목록 조회 성공",
+                        appDeploymentService.getAppDeploymentsByProjectId(projectId)
+                )
+        );
     }
 
     @GetMapping("/logs")
-    public ResponseEntity<String> getLogsByProjectIdAndAppId(
+    public ResponseEntity<ApiResponseDto<String>> getLogsByProjectIdAndAppId(
             @RequestParam(value = "project_id") String projectId,
             @RequestParam(value = "app_name") String appName
     ) {
-        return ResponseEntity.ok(appDeploymentService.getLogs(projectId, appName));
+        return ResponseEntity.ok(
+                ApiResponseDto.of(
+                        "앱 로그 조회 성공",
+                        appDeploymentService.getLogs(projectId, appName)
+                )
+        );
     }
 
     @GetMapping
-    public ResponseEntity<AppResourceStatusResponseDto> getAppDeploymentByProjectIdAndAppName(
+    public ResponseEntity<ApiResponseDto<AppResourceStatusResponseDto>> getAppDeploymentByProjectIdAndAppName(
             @RequestParam(value = "project_id") String projectId,
             @RequestParam(value = "app_name") String appName
     ) {
-        return ResponseEntity.ok(appDeploymentService.getAppDeploymentByProjectIdAndAppName(projectId, appName).getFirst());
+        return ResponseEntity.ok(
+                ApiResponseDto.of(
+                        "앱 리소스 상태 조회 성공",
+                        appDeploymentService.getAppDeploymentByProjectIdAndAppName(projectId, appName).getFirst()
+                )
+        );
     }
 }
