@@ -11,6 +11,7 @@ import madp.appdeployment.domain.exception.GithubAllowedRepoNotFoundException;
 import madp.appdeployment.domain.exception.ProjectAccessDeniedException;
 import madp.appdeployment.domain.infrastructure.client.ProjectClient;
 import madp.appdeployment.domain.infrastructure.client.ResourceClient;
+import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseDto;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
@@ -65,10 +66,32 @@ public class AppDeploymentService {
         if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).getData().status())
             throw new ProjectAccessDeniedException();
 
+        // AppDeployment 삭제 시, 관련된 리소스(jenkins) 해제
+        resourceClient.deleteAppDeployment(appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
+
         appDeploymentRepository.delete(appDeploymentEntity);
 
-        // AppDeployment 삭제 시, 관련된 리소스(jenkins, resource svc) 해제
 
+    }
+
+    @Transactional
+    public void updateAppDeploymentResourceInfo(Long appDeploymentId, ResourceInfo resourceInfo) {
+        AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(appDeploymentId)
+                .orElseThrow(AppDeploymentNotFoundException::new);
+
+        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).getData().status())
+            throw new ProjectAccessDeniedException();
+
+        resourceClient.reviseApp(
+                new AppRevisionRequestDto(
+                        appDeploymentId.toString(),
+                        resourceInfo.getCpu(),
+                        resourceInfo.getMemory(),
+                        resourceInfo.getDisk()
+                )
+        );
+
+        appDeploymentEntity.updateResourceInfo(resourceInfo);
     }
 
     @Transactional
