@@ -2,8 +2,11 @@ package madp.appdeployment.domain.infrastructure.client;
 
 import jakarta.validation.Valid;
 import madp.appdeployment.domain.infrastructure.client.fallback.ProjectClientFallback;
+import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
 import madp.appdeployment.domain.infrastructure.client.request.AppDeploymentRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
+import madp.appdeployment.domain.infrastructure.client.response.AppRevisionResponseDto;
+import madp.appdeployment.domain.infrastructure.client.response.DeleteAppDeploymentResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseDto;
 import madp.appdeployment.global.configuration.InternalServiceCommunicationConfiguration;
 import madp.appdeployment.global.presentation.response.dto.ApiResponseDto;
@@ -29,4 +32,13 @@ public interface ResourceClient {
 
     @GetMapping("/resource/apps/{projectId}/{appName}/logs")
     ApiResponseDto<PodLogsResponseDto.LogDataDto> getPodLogs(@PathVariable String projectId, @PathVariable String appName);
+
+    @PatchMapping("/v1/apps")
+    ApiResponseDto<AppRevisionResponseDto> reviseApp(@RequestBody @Valid AppRevisionRequestDto appRevisionRequestDto);
+
+    @DeleteMapping("/apps/{project-id}/{name}")
+    ApiResponseDto<DeleteAppDeploymentResponseDto> deleteAppDeployment(
+            @PathVariable("project-id") String projectId,
+            @PathVariable String name
+    );
 }
