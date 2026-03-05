@@ -56,6 +56,21 @@ public class AppDeploymentService {
     }
 
     @Transactional
+    public void deleteAppDeployment(Long appDeploymentId) {
+        AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(appDeploymentId)
+                .orElseThrow(AppDeploymentNotFoundException::new);
+
+        // 프로젝트 오너인지 확인하도록 변경 - 현재는 프로젝트 멤버인지 판별하는 로직임
+        if(!projectClient.getProjectAvailable(appDeploymentEntity.getProjectId()).status())
+            throw new ProjectAccessDeniedException();
+
+        appDeploymentRepository.delete(appDeploymentEntity);
+
+        // AppDeployment 삭제 시, 관련된 리소스(jenkins, resource svc) 해제
+
+    }
+
+    @Transactional
     public void updateGithubInfo(UpdateGithubInfoRequestDto updateGithubInfoRequestDto) {
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(updateGithubInfoRequestDto.appDeploymentId())
                 .orElseThrow(AppDeploymentNotFoundException::new);
