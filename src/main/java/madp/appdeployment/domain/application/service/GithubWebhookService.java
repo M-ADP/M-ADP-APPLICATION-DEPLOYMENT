@@ -26,6 +26,7 @@ import madp.appdeployment.domain.presentation.dto.request.GithubWebhookOrganizat
 import madp.appdeployment.domain.presentation.dto.request.GithubWebhookPushRequestDto;
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.presentation.dto.response.GithubAllowedRepositoryResponseDto;
+import madp.appdeployment.global.presentation.response.dto.ApiResponseDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -107,8 +108,8 @@ public class GithubWebhookService {
      * @return 사용자가 접근 가능한 GitHub Repository 목록
      */
     public List<GithubAllowedRepositoryResponseDto> getAllowedRepositories() {
-        UserProfileResponseDto userProfileResponseDto = userClient.getUserProfile();
-        Long userGithubId = userProfileResponseDto.id();
+        ApiResponseDto<UserProfileResponseDto> userProfileResponseDto = userClient.getUserProfile();
+        Long userGithubId = userProfileResponseDto.getData().id();
         
         // 사용자가 속한 모든 GitHub 계정(개인/조직) ID 조회
         List<Long> userAllGithubAccounts = githubAccountUserRepository.findAllGithubAccountIdByGithubUserId(userGithubId);
