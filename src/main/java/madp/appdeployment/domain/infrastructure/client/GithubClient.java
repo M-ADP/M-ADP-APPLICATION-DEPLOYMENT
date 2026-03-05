@@ -17,7 +17,7 @@ public interface GithubClient {
 
     @PostMapping("/app/installations/{installationId}/access_tokens")
     GithubAccessTokenResponse createInstallationAccessToken(
-            @PathVariable("installationId") String installationId,
+            @PathVariable String installationId,
             @RequestHeader("Authorization") String authorization
     );
 
@@ -29,9 +29,9 @@ public interface GithubClient {
 
     @GetMapping("/repos/{owner}/{repo}/contents/{path}")
     GithubFileContentResponse getFileContent(
-            @PathVariable("owner") String owner,
-            @PathVariable("repo") String repo,
-            @PathVariable("path") String path,
+            @PathVariable String owner,
+            @PathVariable String repo,
+            @PathVariable String path,
             @RequestHeader("Authorization") String authorization,
             @RequestParam(value = "ref", required = false) String branch
     );
