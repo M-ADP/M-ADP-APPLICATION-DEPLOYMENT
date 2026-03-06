@@ -69,6 +69,13 @@ public class AppDeploymentEntity extends BaseEntity {
         this.currentVersion = 0;
     }
 
+    public void updateResourceInfo(ResourceInfo resourceInfo) {
+        if (resourceInfo == null) {
+            throw new InvalidAppDeploymentException("리소스 정보는 필수입니다.");
+        }
+        this.resourceInfo = resourceInfo;
+    }
+
     public void upgradeVersion() {
         this.currentVersion++;
     }
