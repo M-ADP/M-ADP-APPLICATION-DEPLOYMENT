@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import madp.appdeployment.domain.application.service.AppDeploymentService;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
 import org.springframework.http.ResponseEntity;
@@ -56,6 +57,14 @@ public class AppDeploymentController {
             @RequestParam(value = "project_id") String projectId,
             @RequestParam(value = "app_name") String appName
     ) {
-        return ResponseEntity.ok(appDeploymentService.getAppDeploymentByProjectIdAndAppName(projectId, appName).getFirst());
+        return ResponseEntity.ok(appDeploymentService.getAppDeploymentByProjectIdAndAppName(projectId, appName));
+    }
+
+    @GetMapping("/details")
+    public ResponseEntity<AppDeploymentInfoResponseDto> getDetailsProjectIdAndAppName(
+            @RequestParam(value = "project_id") String projectId,
+            @RequestParam(value = "app_name") String appName
+    ) {
+        return ResponseEntity.ok(appDeploymentService.getDetailsProjectIdAndAppName(projectId, appName));
     }
 }

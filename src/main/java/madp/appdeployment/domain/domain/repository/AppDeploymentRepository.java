@@ -18,4 +18,7 @@ public interface AppDeploymentRepository extends JpaRepository<AppDeploymentEnti
 
     @Query("select ad from AppDeploymentEntity ad where ad.projectId = :projectId")
     List<AppDeploymentEntity> findAllByProjectId(String projectId);
+
+    @Query("select ad from AppDeploymentEntity ad where ad.projectId = :projectId and ad.name = :name")
+    Optional<AppDeploymentEntity> findByProjectIdAndName(String projectId, String name);
 }

@@ -15,6 +15,7 @@ import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentRes
 import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseDto;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
 import org.springframework.stereotype.Service;
@@ -104,15 +105,14 @@ public class AppDeploymentService {
     }
 
     @Transactional(readOnly = true)
-    public List<AppResourceStatusResponseDto> getAppDeploymentByProjectIdAndAppName(String projectId, String appName) {
+    public AppResourceStatusResponseDto getAppDeploymentByProjectIdAndAppName(String projectId, String appName) {
         if(!projectClient.getProjectAvailable(projectId).status())
             throw new ProjectAccessDeniedException();
 
         AppDeploymentResourceStatusResponseDto appDeploymentResourceStatusResponseDto = resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName));
-        List<AppDeploymentResourceStatusResponseDto.AppResourceDto> data = appDeploymentResourceStatusResponseDto.data();
+        AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto = appDeploymentResourceStatusResponseDto.data().getFirst();
 
-        return data.stream().map((appResourceDto) ->
-            AppResourceStatusResponseDto.builder()
+        return AppResourceStatusResponseDto.builder()
                     .cpuUsagePercentage(appResourceDto.cpu().percentage())
                     .memoryUsed(appResourceDto.memory().used())
                     .memoryTotal(appResourceDto.memory().limit())
@@ -120,8 +120,46 @@ public class AppDeploymentService {
                     .diskTotal(appResourceDto.disk().limit())
                     .currentInstances(appResourceDto.instance().used())
                     .availableInstances(appResourceDto.instance().limit())
-                    .build()
-        ).toList();
+                    .build();
+    }
 
+    @Transactional(readOnly = true)
+    public AppDeploymentInfoResponseDto getDetailsProjectIdAndAppName(String projectId, String appName) {
+        if(!projectClient.getProjectAvailable(projectId).status())
+            throw new ProjectAccessDeniedException();
+
+        AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+                .orElseThrow(AppDeploymentNotFoundException::new);
+
+        AppDeploymentResourceStatusResponseDto appDeploymentResourceStatusResponseDto = 
+                resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName));
+
+        AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto =
+                appDeploymentResourceStatusResponseDto.data().getFirst();
+
+        int resourceUsePercentage = calculateWeightedResourceUsage(
+                appResourceDto.memory().percentage(),
+                appResourceDto.cpu().percentage(),
+                appResourceDto.disk().percentage()
+        );
+
+        return AppDeploymentInfoResponseDto.builder()
+                .port(appDeploymentEntity.getPort())
+                .resourceUsePercentage(resourceUsePercentage)
+                .githubRepositoryUrl(appDeploymentEntity.getGithubRepository().getRepositoryFullName())
+                .status(appDeploymentEntity.getStatus().name())
+                .build();
+    }
+
+    private int calculateWeightedResourceUsage(int memoryPercentage, int cpuPercentage, int diskPercentage) {
+        double memoryWeight = 0.5;
+        double cpuWeight = 0.3; 
+        double diskWeight = 0.2;
+        
+        double weightedAverage = (memoryPercentage * memoryWeight) + 
+                                (cpuPercentage * cpuWeight) + 
+                                (diskPercentage * diskWeight);
+        
+        return Math.min((int) Math.round(weightedAverage), 100);
     }
 }

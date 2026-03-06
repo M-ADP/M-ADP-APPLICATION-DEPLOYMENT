@@ -58,6 +58,11 @@ public class JenkinsService {
                                                         )
                                                         .build()
                                         )
+                                        .disk(
+                                                AppDeploymentRequestDto.DiskDto.builder()
+                                                        .size(appDeploymentEntity.getResourceInfo().getDisk().toString())
+                                                        .build()
+                                        )
                                         .build()
                         )
                 )
