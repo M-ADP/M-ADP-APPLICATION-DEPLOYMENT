@@ -50,3 +50,7 @@ github:
     private-key: ${GITHUB_PRIVATE_KEY}
     app-id: ${GITHUB_APP_ID}
     webhook-secret: ${GITHUB_SECRET}
+
+logging:
+  level:
+    root: TRACE
