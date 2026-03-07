@@ -72,7 +72,6 @@ public class AppDeploymentService {
 
         appDeploymentRepository.delete(appDeploymentEntity);
 
-
     }
 
     @Transactional
@@ -146,13 +145,14 @@ public class AppDeploymentService {
 
     @Transactional(readOnly = true)
     public AppResourceStatusResponseDto getAppDeploymentByProjectIdAndAppName(String projectId, String appName) {
-        if(!projectClient.getProjectAvailable(projectId).status())
+        if(!projectClient.getProjectAvailable(projectId).getData().status())
             throw new ProjectAccessDeniedException();
 
-        AppDeploymentResourceStatusResponseDto appDeploymentResourceStatusResponseDto = resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName));
-        AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto = appDeploymentResourceStatusResponseDto.data().getFirst();
+        AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto =
+                resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).getData().getFirst();
 
         return AppResourceStatusResponseDto.builder()
+                    .appId(Long.parseLong(appResourceDto.appId()))
                     .cpuUsagePercentage(appResourceDto.cpu().percentage())
                     .memoryUsed(appResourceDto.memory().used())
                     .memoryTotal(appResourceDto.memory().limit())
@@ -165,17 +165,14 @@ public class AppDeploymentService {
 
     @Transactional(readOnly = true)
     public AppDeploymentInfoResponseDto getDetailsProjectIdAndAppName(String projectId, String appName) {
-        if(!projectClient.getProjectAvailable(projectId).status())
+        if(!projectClient.getProjectAvailable(projectId).getData().status())
             throw new ProjectAccessDeniedException();
 
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
-        AppDeploymentResourceStatusResponseDto appDeploymentResourceStatusResponseDto = 
-                resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName));
-
         AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto =
-                appDeploymentResourceStatusResponseDto.data().getFirst();
+                resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).getData().getFirst();
 
         int resourceUsePercentage = calculateWeightedResourceUsage(
                 appResourceDto.memory().percentage(),

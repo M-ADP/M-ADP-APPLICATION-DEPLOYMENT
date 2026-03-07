@@ -5,6 +5,9 @@ import lombok.Builder;
 
 @Builder
 public record AppResourceStatusResponseDto(
+        @JsonProperty
+        Long appId,
+
         @JsonProperty("cpu_usage_percentage")
         Integer cpuUsagePercentage,
 

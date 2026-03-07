@@ -1,3 +1,52 @@
 spring:
   application:
     name: madp-appdeployment-dev
+
+  # MySQL Docker 컨테이너 연결
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  # Redis Docker 컨테이너 연결
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          user-client:
+            url: ${USER_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
+          project-client:
+            url: ${PROJECT_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
+          resource-client:
+            url: ${RESOURCE_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
+          jenkins-client:
+            url: ${JENKINS_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
+          github-client:
+            url: ${GITHUB_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
+
+github:
+  webhook:
+    private-key: ${GITHUB_PRIVATE_KEY}
+    app-id: ${GITHUB_APP_ID}
+    webhook-secret: ${GITHUB_SECRET}

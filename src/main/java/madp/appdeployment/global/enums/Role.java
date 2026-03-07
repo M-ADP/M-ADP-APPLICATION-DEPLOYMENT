@@ -21,7 +21,7 @@ public enum Role {
 
     private final String value;
     private static final Map<String, Role> TYPE_MAP =
-            Arrays.stream(values()).collect(toMap(type -> type.value, identity()));
+            Arrays.stream(values()).collect(toMap(Enum::name, identity()));
 
     public static Role of(String roleString) {
         Role role = TYPE_MAP.get(roleString);

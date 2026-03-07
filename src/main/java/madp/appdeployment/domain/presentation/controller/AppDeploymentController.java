@@ -3,8 +3,11 @@ package madp.appdeployment.domain.presentation.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import madp.appdeployment.domain.application.service.AppDeploymentService;
+import madp.appdeployment.domain.domain.vo.ResourceInfo;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
+import madp.appdeployment.domain.presentation.dto.request.DeleteAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
+import madp.appdeployment.domain.presentation.dto.request.UpdateResourceInfoRequestDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
@@ -38,6 +41,29 @@ public class AppDeploymentController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/resources")
+    public ResponseEntity<Void> updateResourceInfo(
+            @Valid @RequestBody UpdateResourceInfoRequestDto updateResourceInfoRequestDto
+    ) {
+        appDeploymentService.updateAppDeploymentResourceInfo(
+                updateResourceInfoRequestDto.appDeploymentId(),
+                ResourceInfo.builder()
+                        .cpu(updateResourceInfoRequestDto.cpu())
+                        .memory(updateResourceInfoRequestDto.memory())
+                        .disk(updateResourceInfoRequestDto.disk())
+                        .build()
+        );
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAppDeployment(
+            @Valid @RequestBody DeleteAppDeploymentRequestDto deleteAppDeploymentRequestDto
+    ) {
+        appDeploymentService.deleteAppDeployment(deleteAppDeploymentRequestDto.appDeploymentId());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponseDto<List<AppDeploymentStatusResponseDto>>> getAppDeploymentsByProjectId(
             @RequestParam(value = "project_id") String projectId
@@ -68,23 +94,24 @@ public class AppDeploymentController {
             @RequestParam(value = "project_id") String projectId,
             @RequestParam(value = "app_name") String appName
     ) {
-<<<<<<< Updated upstream
         return ResponseEntity.ok(
                 ApiResponseDto.of(
                         "앱 리소스 상태 조회 성공",
-                        appDeploymentService.getAppDeploymentByProjectIdAndAppName(projectId, appName).getFirst()
+                        appDeploymentService.getAppDeploymentByProjectIdAndAppName(projectId, appName)
                 )
         );
-=======
-        return ResponseEntity.ok(appDeploymentService.getAppDeploymentByProjectIdAndAppName(projectId, appName));
     }
 
     @GetMapping("/details")
-    public ResponseEntity<AppDeploymentInfoResponseDto> getDetailsProjectIdAndAppName(
+    public ResponseEntity<ApiResponseDto<AppDeploymentInfoResponseDto>> getDetailsProjectIdAndAppName(
             @RequestParam(value = "project_id") String projectId,
             @RequestParam(value = "app_name") String appName
     ) {
-        return ResponseEntity.ok(appDeploymentService.getDetailsProjectIdAndAppName(projectId, appName));
->>>>>>> Stashed changes
+        return ResponseEntity.ok(
+                ApiResponseDto.of(
+                        "앱 리소스 세부사항 조회 성공",
+                        appDeploymentService.getDetailsProjectIdAndAppName(projectId, appName)
+                )
+        );
     }
 }
