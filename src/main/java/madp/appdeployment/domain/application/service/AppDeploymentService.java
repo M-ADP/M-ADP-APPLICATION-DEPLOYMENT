@@ -19,7 +19,7 @@ import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoReques
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
-import madp.appdeployment.global.presentation.response.dto.ApiResponseDto;
+import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -9,7 +9,7 @@ import madp.appdeployment.domain.infrastructure.client.response.AppRevisionRespo
 import madp.appdeployment.domain.infrastructure.client.response.DeleteAppDeploymentResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseDto;
 import madp.appdeployment.global.configuration.InternalServiceCommunicationConfiguration;
-import madp.appdeployment.global.presentation.response.dto.ApiResponseDto;
+import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 

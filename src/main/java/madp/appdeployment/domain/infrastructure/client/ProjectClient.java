@@ -4,7 +4,7 @@ import madp.appdeployment.domain.infrastructure.client.fallback.ProjectClientFal
 import madp.appdeployment.domain.infrastructure.client.response.ProjectAvailableResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.ProjectOwnerResponseDto;
 import madp.appdeployment.global.configuration.InternalServiceCommunicationConfiguration;
-import madp.appdeployment.global.presentation.response.dto.ApiResponseDto;
+import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;

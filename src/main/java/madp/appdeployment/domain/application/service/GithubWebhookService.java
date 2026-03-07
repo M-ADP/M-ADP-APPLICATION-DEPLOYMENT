@@ -26,7 +26,7 @@ import madp.appdeployment.domain.presentation.dto.request.GithubWebhookOrganizat
 import madp.appdeployment.domain.presentation.dto.request.GithubWebhookPushRequestDto;
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.presentation.dto.response.GithubAllowedRepositoryResponseDto;
-import madp.appdeployment.global.presentation.response.dto.ApiResponseDto;
+import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
