@@ -66,7 +66,10 @@ public class GithubAppTokenManager {
         try {
             Security.addProvider(new BouncyCastleProvider());
             
-            PEMParser pemParser = new PEMParser(new StringReader(privateKeyContent));
+            // Vault의 \n 문자열을 실제 줄바꿈으로 변환
+            String formattedKey = privateKeyContent.replace("\\n", "\n");
+            
+            PEMParser pemParser = new PEMParser(new StringReader(formattedKey));
             Object pemObject = pemParser.readObject();
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
             
