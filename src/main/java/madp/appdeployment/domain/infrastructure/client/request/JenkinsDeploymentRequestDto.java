@@ -7,6 +7,10 @@ import lombok.NonNull;
 @Builder
 public record JenkinsDeploymentRequestDto(
     @NonNull
+    @JsonProperty("project_id")
+    String projectId,
+
+    @NonNull
     @JsonProperty("repository_full_name")
     String repositoryFullName,
 
@@ -15,8 +19,8 @@ public record JenkinsDeploymentRequestDto(
     String branch,
 
     @NonNull
-    @JsonProperty("image_name")
-    String imageName,
+    @JsonProperty("app_id")
+    Long appId,
 
     @NonNull
     @JsonProperty("repository_id")

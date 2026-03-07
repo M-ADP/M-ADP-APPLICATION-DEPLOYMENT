@@ -14,10 +14,5 @@ public record JenkinsSuccessTriggerRequestDto(
         @JsonProperty("tag")
         @NotNull(message = "태그는 존재해야합니다.")
         @NotBlank(message = "태그는 존재해야합니다.")
-        String tag,
-
-        @JsonProperty("image")
-        @NotNull(message = "이미지는 존재해야합니다.")
-        @NotBlank(message = "이미지는 존재해야합니다.")
-        String image
+        String tag
 ) {}

@@ -38,7 +38,7 @@ public class JenkinsService {
         appDeploymentEntity.upgradeVersion();
 
         String projectId = appDeploymentEntity.getProjectId();
-        String imageName = jenkinsSuccessTriggerRequestDto.image();
+        String imageName = projectId + "/" + jenkinsSuccessTriggerRequestDto.repositoryId();
 
         AppDeploymentRequestDto appDeploymentRequestDto = AppDeploymentRequestDto.builder()
                 .name(projectId)

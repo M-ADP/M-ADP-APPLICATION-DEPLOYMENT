@@ -220,12 +220,11 @@ public class GithubWebhookService {
 
         if(!pushPayload.isBranch(appDeploymentEntity.getGithubBranch())) return;
 
-        String imageName = "repo-" + pushPayload.repository().id();
-
         JenkinsDeploymentRequestDto jenkinsDeploymentRequestDto = JenkinsDeploymentRequestDto.builder()
                 .repositoryId(pushPayload.repository().id())
                 .branch(pushPayload.getBranchName())
-                .imageName(imageName)
+                .projectId(appDeploymentEntity.getProjectId())
+                .appId(pushPayload.repository().id())
                 .repositoryFullName(pushPayload.repository().fullName())
                 .build();
 
