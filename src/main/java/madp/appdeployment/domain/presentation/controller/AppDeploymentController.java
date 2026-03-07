@@ -26,11 +26,16 @@ public class AppDeploymentController {
     private final AppDeploymentService appDeploymentService;
 
     @PostMapping
-    public ResponseEntity<Void> createAppDeployment(
+    public ResponseEntity<ApiResponseDto<Long>> createAppDeployment(
             @Valid @RequestBody CreateAppDeploymentRequestDto createAppDeploymentRequestDto
     ) {
-        appDeploymentService.createAppDeployment(createAppDeploymentRequestDto);
-        return ResponseEntity.noContent().build();
+
+        return ResponseEntity.ok(
+                ApiResponseDto.of(
+                        "애플리케이션이 생성되었습니다.",
+                        appDeploymentService.createAppDeployment(createAppDeploymentRequestDto)
+                )
+        );
     }
 
     @PatchMapping("/github")

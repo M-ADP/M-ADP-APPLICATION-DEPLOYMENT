@@ -38,7 +38,7 @@ public class AppDeploymentService {
     private final ResourceClient resourceClient;
 
     @Transactional
-    public void createAppDeployment(CreateAppDeploymentRequestDto createAppDeploymentRequestDto) {
+    public Long createAppDeployment(CreateAppDeploymentRequestDto createAppDeploymentRequestDto) {
         if(!projectClient.getProjectOwner(createAppDeploymentRequestDto.projectId()).data().status())
             throw new ProjectAccessDeniedException();
 
@@ -55,7 +55,7 @@ public class AppDeploymentService {
                 .resourceInfo(resourceInfo)
                 .build();
 
-        appDeploymentRepository.save(appDeploymentEntity);
+        return appDeploymentRepository.save(appDeploymentEntity).getId();
     }
 
     @Transactional
