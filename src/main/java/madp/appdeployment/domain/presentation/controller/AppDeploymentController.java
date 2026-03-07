@@ -89,7 +89,7 @@ public class AppDeploymentController {
         );
     }
 
-    @GetMapping
+    @GetMapping("/status")
     public ResponseEntity<ApiResponseDto<AppResourceStatusResponseDto>> getAppDeploymentByProjectIdAndAppName(
             @RequestParam(value = "project_id") String projectId,
             @RequestParam(value = "app_name") String appName
