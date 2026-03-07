@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/github")
+@RequestMapping("/apps/github")
 @RequiredArgsConstructor
 public class GithubApiController {
     private final GithubWebhookAsyncService githubWebhookAsyncService;
