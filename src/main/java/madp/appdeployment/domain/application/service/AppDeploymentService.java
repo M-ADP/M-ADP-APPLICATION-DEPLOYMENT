@@ -39,7 +39,7 @@ public class AppDeploymentService {
 
     @Transactional
     public void createAppDeployment(CreateAppDeploymentRequestDto createAppDeploymentRequestDto) {
-        if(!projectClient.getProjectOwner(createAppDeploymentRequestDto.projectId()).getData().status())
+        if(!projectClient.getProjectOwner(createAppDeploymentRequestDto.projectId()).data().status())
             throw new ProjectAccessDeniedException();
 
         ResourceInfo resourceInfo = ResourceInfo.builder()
@@ -64,7 +64,7 @@ public class AppDeploymentService {
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
         // 프로젝트 오너인지 확인하도록 변경 - 현재는 프로젝트 멤버인지 판별하는 로직임
-        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).getData().status())
+        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status())
             throw new ProjectAccessDeniedException();
 
         // AppDeployment 삭제 시, 관련된 리소스(jenkins) 해제
@@ -79,7 +79,7 @@ public class AppDeploymentService {
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(appDeploymentId)
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
-        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).getData().status())
+        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status())
             throw new ProjectAccessDeniedException();
 
         resourceClient.reviseApp(
@@ -99,7 +99,7 @@ public class AppDeploymentService {
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(updateGithubInfoRequestDto.appDeploymentId())
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
-        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).getData().status())
+        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status())
             throw new ProjectAccessDeniedException();
 
         String repositoryFullName = updateGithubInfoRequestDto.owner() + "/" + updateGithubInfoRequestDto.repository();
@@ -110,7 +110,7 @@ public class AppDeploymentService {
 
     @Transactional(readOnly = true)
     public List<AppDeploymentStatusResponseDto> getAppDeploymentsByProjectId(String projectId) {
-        if(!projectClient.getProjectAvailable(projectId).getData().status())
+        if(!projectClient.getProjectAvailable(projectId).data().status())
             throw new ProjectAccessDeniedException();
 
         List<AppDeploymentEntity> appDeploymentEntities = appDeploymentRepository.findAllByProjectId(projectId);
@@ -120,7 +120,7 @@ public class AppDeploymentService {
         Map<String, AppDeploymentEntity> appDeploymentEntityMap = appDeploymentEntities.stream()
                 .collect(Collectors.toMap(AppDeploymentEntity::getName, Function.identity()));
 
-        return appDeploymentResourceStatusResponseDto.getData().stream().map(
+        return appDeploymentResourceStatusResponseDto.data().stream().map(
                 (appResourceDto) -> {
                     AppDeploymentEntity appDeployment = appDeploymentEntityMap.get(appResourceDto.appId());
                     return AppDeploymentStatusResponseDto.builder()
@@ -136,20 +136,20 @@ public class AppDeploymentService {
 
     @Transactional(readOnly = true)
     public String getLogs(String projectId, String appName) {
-        if(!projectClient.getProjectAvailable(projectId).getData().status())
+        if(!projectClient.getProjectAvailable(projectId).data().status())
             throw new ProjectAccessDeniedException();
 
         ApiResponseDto<PodLogsResponseDto.LogDataDto> podLogsResponseDto = resourceClient.getPodLogs(projectId, appName);
-        return podLogsResponseDto.getData().podLogs().getFirst().logs();
+        return podLogsResponseDto.data().podLogs().getFirst().logs();
     }
 
     @Transactional(readOnly = true)
     public AppResourceStatusResponseDto getAppDeploymentByProjectIdAndAppName(String projectId, String appName) {
-        if(!projectClient.getProjectAvailable(projectId).getData().status())
+        if(!projectClient.getProjectAvailable(projectId).data().status())
             throw new ProjectAccessDeniedException();
 
         AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto =
-                resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).getData().getFirst();
+                resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).data().getFirst();
 
         return AppResourceStatusResponseDto.builder()
                     .appId(Long.parseLong(appResourceDto.appId()))
@@ -165,14 +165,14 @@ public class AppDeploymentService {
 
     @Transactional(readOnly = true)
     public AppDeploymentInfoResponseDto getDetailsProjectIdAndAppName(String projectId, String appName) {
-        if(!projectClient.getProjectAvailable(projectId).getData().status())
+        if(!projectClient.getProjectAvailable(projectId).data().status())
             throw new ProjectAccessDeniedException();
 
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
         AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto =
-                resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).getData().getFirst();
+                resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).data().getFirst();
 
         int resourceUsePercentage = calculateWeightedResourceUsage(
                 appResourceDto.memory().percentage(),

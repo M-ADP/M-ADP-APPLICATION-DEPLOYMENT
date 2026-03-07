@@ -109,7 +109,7 @@ public class GithubWebhookService {
      */
     public List<GithubAllowedRepositoryResponseDto> getAllowedRepositories() {
         ApiResponseDto<UserProfileResponseDto> userProfileResponseDto = userClient.getUserProfile();
-        Long userGithubId = userProfileResponseDto.getData().id();
+        Long userGithubId = userProfileResponseDto.data().id();
         
         // 사용자가 속한 모든 GitHub 계정(개인/조직) ID 조회
         List<Long> userAllGithubAccounts = githubAccountUserRepository.findAllGithubAccountIdByGithubUserId(userGithubId);
