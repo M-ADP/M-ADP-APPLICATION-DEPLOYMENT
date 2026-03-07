@@ -5,6 +5,9 @@ import lombok.Builder;
 
 @Builder
 public record AppDeploymentInfoResponseDto(
+        @JsonProperty("app_id")
+        Long appId,
+
         @JsonProperty("port")
         Integer port,
 

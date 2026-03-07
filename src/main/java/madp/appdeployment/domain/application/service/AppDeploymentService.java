@@ -181,6 +181,7 @@ public class AppDeploymentService {
         );
 
         return AppDeploymentInfoResponseDto.builder()
+                .appId(Long.parseLong(appResourceDto.appId()))
                 .port(appDeploymentEntity.getPort())
                 .resourceUsePercentage(resourceUsePercentage)
                 .githubRepositoryUrl(appDeploymentEntity.getGithubRepository().getRepositoryFullName())
