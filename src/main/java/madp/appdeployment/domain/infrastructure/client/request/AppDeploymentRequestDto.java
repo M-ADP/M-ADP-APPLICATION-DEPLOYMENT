@@ -39,7 +39,11 @@ public record AppDeploymentRequestDto(
             @JsonProperty("resources")
             @NotNull(message = "리소스 정보는 존재해야합니다.")
             @Valid
-            ResourcesDto resources
+            ResourcesDto resources,
+
+            @JsonProperty("disk")
+            @Valid
+            DiskDto disk
     ) {}
 
     @Builder
@@ -61,5 +65,13 @@ public record AppDeploymentRequestDto(
             @NotNull(message = "메모리는 존재해야합니다.")
             @NotBlank(message = "메모리는 존재해야합니다.")
             String memory
+    ) {}
+
+    @Builder
+    public record DiskDto(
+            @JsonProperty("size")
+            @NotNull(message = "디스크 크기는 존재해야합니다.")
+            @NotBlank(message = "디스크 크기는 존재해야합니다.")
+            String size
     ) {}
 }

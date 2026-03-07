@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import madp.appdeployment.domain.application.service.AppDeploymentService;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
 import madp.appdeployment.global.presentation.response.dto.ApiResponseDto;
@@ -67,11 +68,23 @@ public class AppDeploymentController {
             @RequestParam(value = "project_id") String projectId,
             @RequestParam(value = "app_name") String appName
     ) {
+<<<<<<< Updated upstream
         return ResponseEntity.ok(
                 ApiResponseDto.of(
                         "앱 리소스 상태 조회 성공",
                         appDeploymentService.getAppDeploymentByProjectIdAndAppName(projectId, appName).getFirst()
                 )
         );
+=======
+        return ResponseEntity.ok(appDeploymentService.getAppDeploymentByProjectIdAndAppName(projectId, appName));
+    }
+
+    @GetMapping("/details")
+    public ResponseEntity<AppDeploymentInfoResponseDto> getDetailsProjectIdAndAppName(
+            @RequestParam(value = "project_id") String projectId,
+            @RequestParam(value = "app_name") String appName
+    ) {
+        return ResponseEntity.ok(appDeploymentService.getDetailsProjectIdAndAppName(projectId, appName));
+>>>>>>> Stashed changes
     }
 }
