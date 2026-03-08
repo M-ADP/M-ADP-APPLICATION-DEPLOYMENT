@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
         fallback = JenkinsClientFallback.class
 )
 public interface JenkinsClient {
-    @PostMapping("/callback/trigger")
+    @PostMapping("/job/app-deployment-pipeline/buildWithParameters")
     void triggerJenkins(@RequestBody @NonNull JenkinsDeploymentRequestDto jenkinsDeploymentRequestDto, @RequestHeader("Authorization") String authorization, @RequestHeader("Jenkins-Crumb") String crumb);
 
     @GetMapping("/crumbIssuer/api/json")
