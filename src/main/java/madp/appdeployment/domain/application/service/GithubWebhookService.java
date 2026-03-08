@@ -27,6 +27,7 @@ import madp.appdeployment.domain.presentation.dto.request.GithubWebhookPushReque
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.presentation.dto.response.GithubAllowedRepositoryResponseDto;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
+import madp.appdeployment.global.properties.JenkinsProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +45,7 @@ public class GithubWebhookService {
     private final GithubAppTokenManager githubAppTokenManager;
     private final GithubClient githubClient;
     private final JenkinsClient jenkinsClient;
+    private final JenkinsProperties jenkinsProperties;
 
     @Transactional
     public void installGithubApp(GithubWebhookInstallationRequestDto githubWebhookInstallationRequestDto) {
@@ -228,7 +230,10 @@ public class GithubWebhookService {
                 .repositoryFullName(pushPayload.repository().fullName())
                 .build();
 
-        jenkinsClient.triggerJenkins(jenkinsDeploymentRequestDto);
+        String authenticationToken = "Basic " + jenkinsProperties.getUsername() + ":" + jenkinsProperties.getApiKey();
+        String crumb = jenkinsClient.getCrumb(authenticationToken).crumb();
+
+        jenkinsClient.triggerJenkins(jenkinsDeploymentRequestDto, authenticationToken, crumb);
 
         appDeploymentEntity.updateStatus(AppDeploymentStatus.BUILDING);
 

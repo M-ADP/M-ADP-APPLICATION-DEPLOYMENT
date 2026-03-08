@@ -51,6 +51,10 @@ github:
     app-id: ${GITHUB_APP_ID}
     webhook-secret: ${GITHUB_SECRET}
 
+jenkins:
+  username: ${JENKINS_USERNAME}
+  api-key: ${JENKINS_API_KEY}
+
 logging:
   level:
     root: TRACE
