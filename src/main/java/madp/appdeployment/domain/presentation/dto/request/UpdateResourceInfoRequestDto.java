@@ -14,7 +14,7 @@ public record UpdateResourceInfoRequestDto(
         @NotNull(message = "CPU 크기는 존재해야합니다.")
         @Min(value = 1, message = "CPU는 최소 1개 이상이어야 합니다.")
         @Max(value = 4, message = "CPU는 최대 4개 이하이어야 합니다.")
-        Integer cpu,
+        Double cpu,
 
         @JsonProperty("max_memory")
         @NotNull(message = "메모리는 존재해야합니다.")

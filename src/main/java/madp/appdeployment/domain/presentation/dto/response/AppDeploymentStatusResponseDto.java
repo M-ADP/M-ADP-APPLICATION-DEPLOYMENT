@@ -5,8 +5,8 @@ import lombok.Builder;
 
 @Builder
 public record AppDeploymentStatusResponseDto(
-        @JsonProperty("name")
-        String name,
+        @JsonProperty("app_id")
+        String appId,
 
         @JsonProperty("pod_count")
         Integer podCount,

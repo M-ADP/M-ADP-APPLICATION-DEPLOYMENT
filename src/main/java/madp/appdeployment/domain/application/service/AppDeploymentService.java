@@ -124,7 +124,7 @@ public class AppDeploymentService {
                 (appResourceDto) -> {
                     AppDeploymentEntity appDeployment = appDeploymentEntityMap.get(appResourceDto.appId());
                     return AppDeploymentStatusResponseDto.builder()
-                            .name(appResourceDto.appId())
+                            .appId(appResourceDto.appId())
                             .cpuUsagePercentage(appResourceDto.cpu().percentage())
                             .memoryUsagePercentage(appResourceDto.memory().percentage())
                             .port(appDeployment.getPort())
