@@ -1,6 +1,8 @@
 package madp.appdeployment.domain.presentation.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -16,9 +18,9 @@ public record CreateAppDeploymentRequestDto(
 
         @JsonProperty("cpu")
         @NotNull(message = "CPU 크기는 존재해야합니다.")
-        @Min(value = 1, message = "CPU는 최소 1개 이상이어야 합니다.")
-        @Max(value = 4, message = "CPU는 최대 4개 이하이어야 합니다.")
-        Integer cpu,
+        @DecimalMin(value = "0.1", message = "CPU는 최소 0.1 이상이어야 합니다.")
+        @DecimalMax(value = "4.0", message = "CPU는 최대 4.0 이하이어야 합니다.")
+        Double cpu,
 
         @JsonProperty("memory")
         @NotNull(message = "메모리는 존재해야합니다.")

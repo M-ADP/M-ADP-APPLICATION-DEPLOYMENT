@@ -13,7 +13,7 @@ import madp.appdeployment.domain.exception.InvalidResourceInfoException;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ResourceInfo {
     @Column(name = "resource_cpu", nullable = false)
-    private Integer cpu;
+    private Double cpu;
 
     @Column(name = "resource_memory", nullable = false)
     private Integer memory;
@@ -22,7 +22,7 @@ public class ResourceInfo {
     private Integer disk;
 
     @Builder
-    public ResourceInfo(Integer cpu, Integer memory, Integer disk) {
+    public ResourceInfo(Double cpu, Integer memory, Integer disk) {
         validateFields(cpu, memory, disk);
 
         this.cpu = cpu;
@@ -31,7 +31,7 @@ public class ResourceInfo {
     }
 
     // ConfigurationProperties로 정책에 따라서 validate 함수 바꿀 예정
-    private void validateFields(Integer cpu, Integer memory, Integer disk) {
+    private void validateFields(Double cpu, Integer memory, Integer disk) {
         if (cpu == null) {
             throw new InvalidResourceInfoException("CPU는 필수입니다.");
         }

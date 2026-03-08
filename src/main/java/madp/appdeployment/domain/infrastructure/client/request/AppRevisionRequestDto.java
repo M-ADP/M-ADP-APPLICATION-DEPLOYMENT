@@ -1,6 +1,7 @@
 package madp.appdeployment.domain.infrastructure.client.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,8 +14,8 @@ public record AppRevisionRequestDto(
 
         @JsonProperty("max_cpu")
         @NotNull(message = "max_cpu는 존재해야 합니다.")
-        @Min(value = 1, message = "max_cpu는 1 이상이어야 합니다.")
-        Integer maxCpu,
+        @DecimalMax(value = "1.0", message = "max_cpu는 1 이상이어야 합니다.")
+        Double maxCpu,
 
         @JsonProperty("max_memory")
         @NotNull(message = "max_memory는 존재해야 합니다.")
