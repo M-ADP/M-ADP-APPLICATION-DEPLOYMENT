@@ -1,6 +1,7 @@
 package madp.appdeployment.domain.application.service;
 
 import lombok.RequiredArgsConstructor;
+import java.util.Base64;
 import madp.appdeployment.domain.domain.entity.GithubAccountUserEntity;
 import madp.appdeployment.domain.domain.entity.GithubAllowedRepoEntity;
 import madp.appdeployment.domain.domain.entity.GithubInstallationEntity;
@@ -230,10 +231,11 @@ public class GithubWebhookService {
                 .repositoryFullName(pushPayload.repository().fullName())
                 .build();
 
-        String authenticationToken = "Basic " + jenkinsProperties.getUsername() + ":" + jenkinsProperties.getApiKey();
-        String crumb = jenkinsClient.getCrumb(authenticationToken).crumb();
+        String credentials = jenkinsProperties.getUsername() + ":" + jenkinsProperties.getApiKey();
+        String authenticationInfo = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
+        String crumb = jenkinsClient.getCrumb(authenticationInfo).crumb();
 
-        jenkinsClient.triggerJenkins(jenkinsDeploymentRequestDto, authenticationToken, crumb);
+        jenkinsClient.triggerJenkins(jenkinsDeploymentRequestDto, authenticationInfo, crumb);
 
         appDeploymentEntity.updateStatus(AppDeploymentStatus.BUILDING);
 
