@@ -8,9 +8,11 @@ import madp.appdeployment.domain.presentation.dto.request.JenkinsSuccessTriggerR
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@RestController("/apps/jenkins")
+@RestController
+@RequestMapping("/apps/jenkins")
 @RequiredArgsConstructor
 public class JenkinsController {
     private final JenkinsService jenkinsService;
