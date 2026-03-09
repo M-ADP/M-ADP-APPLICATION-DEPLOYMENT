@@ -21,19 +21,19 @@ import java.util.List;
         configuration = InternalServiceCommunicationConfiguration.class
 )
 public interface ResourceClient {
-    @PostMapping("/resource/apps/{projectId}")
+    @PostMapping("/apps/{projectId}")
     void createAppDeployment(@PathVariable String projectId, @RequestBody @Valid AppDeploymentRequestDto appDeploymentRequestDto);
 
-    @GetMapping("/resource/apps/{projectId}/resource")
+    @GetMapping("/apps/{projectId}/resource")
     ApiResponseDto<List<AppDeploymentResourceStatusResponseDto.AppResourceDto>> getAppDeploymentResourceStatus(
             @PathVariable String projectId,
             @RequestParam(name = "names") List<String> appNames
     );
 
-    @GetMapping("/resource/apps/{projectId}/{appName}/logs")
+    @GetMapping("/apps/{projectId}/{appName}/logs")
     ApiResponseDto<PodLogsResponseDto.LogDataDto> getPodLogs(@PathVariable String projectId, @PathVariable String appName);
 
-    @PatchMapping("/v1/apps")
+    @PatchMapping("/apps")
     ApiResponseDto<AppRevisionResponseDto> reviseApp(@RequestBody @Valid AppRevisionRequestDto appRevisionRequestDto);
 
     @DeleteMapping("/apps/{project-id}/{name}")
