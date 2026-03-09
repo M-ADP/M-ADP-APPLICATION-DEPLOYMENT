@@ -236,7 +236,15 @@ public class GithubWebhookService {
         String authenticationInfo = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
         String crumb = jenkinsClient.getCrumb(authenticationInfo).crumb();
 
-        jenkinsClient.triggerJenkins(jenkinsDeploymentRequestDto, authenticationInfo, crumb);
+        jenkinsClient.triggerJenkins(
+                jenkinsDeploymentRequestDto.projectId(),
+                jenkinsDeploymentRequestDto.appId(),
+                jenkinsDeploymentRequestDto.repositoryFullName(),
+                jenkinsDeploymentRequestDto.repositoryId(),
+                jenkinsDeploymentRequestDto.branch(),
+                authenticationInfo,
+                crumb
+        );
 
         appDeploymentEntity.updateStatus(AppDeploymentStatus.BUILDING);
 

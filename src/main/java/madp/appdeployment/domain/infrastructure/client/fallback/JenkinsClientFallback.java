@@ -1,9 +1,7 @@
 package madp.appdeployment.domain.infrastructure.client.fallback;
 
-import lombok.NonNull;
 import madp.appdeployment.domain.exception.JenkinsUnavailableException;
 import madp.appdeployment.domain.infrastructure.client.JenkinsClient;
-import madp.appdeployment.domain.infrastructure.client.request.JenkinsDeploymentRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.JenkinsCrumbResponseDto;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +9,7 @@ import org.springframework.stereotype.Component;
 public class JenkinsClientFallback implements JenkinsClient {
 
     @Override
-    public void triggerJenkins(@NonNull JenkinsDeploymentRequestDto jenkinsDeploymentRequestDto, String authorization, String crumb) {
+    public void triggerJenkins(String projectId, Long appId, String repositoryFullName, Long repositoryId, String branch, String authorization, String crumb) {
         throw new JenkinsUnavailableException();
     }
 
