@@ -5,9 +5,9 @@ import madp.appdeployment.domain.infrastructure.client.fallback.JenkinsClientFal
 import madp.appdeployment.domain.infrastructure.client.request.JenkinsDeploymentRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.JenkinsCrumbResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.cloud.openfeign.SpringQueryMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 @FeignClient(
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 )
 public interface JenkinsClient {
     @PostMapping("/job/app-deployment-pipeline/buildWithParameters")
-    void triggerJenkins(@RequestBody @NonNull JenkinsDeploymentRequestDto jenkinsDeploymentRequestDto, @RequestHeader("Authorization") String authorization, @RequestHeader("Jenkins-Crumb") String crumb);
+    void triggerJenkins(@SpringQueryMap @NonNull JenkinsDeploymentRequestDto jenkinsDeploymentRequestDto, @RequestHeader("Authorization") String authorization, @RequestHeader("Jenkins-Crumb") String crumb);
 
     @GetMapping("/crumbIssuer/api/json")
     JenkinsCrumbResponseDto getCrumb(@RequestHeader("Authorization") String authorization);
