@@ -63,6 +63,7 @@ public class GithubWebhookService {
     @Transactional
     public void uninstallGithubApp(Long installationId) {
         // 자식 테이블부터 삭제 (Foreign Key 제약조건 때문)
+        appDeploymentRepository.deleteAllByInstallationId(installationId);
         githubAccountUserRepository.deleteAllByInstallationId(installationId);
         githubAllowedRepoRepository.deleteAllByInstallationId(installationId);
         githubInstallationRepository.deleteAllByInstallationId(installationId);
