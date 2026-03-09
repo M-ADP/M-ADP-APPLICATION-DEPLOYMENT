@@ -1,6 +1,5 @@
 package madp.appdeployment.domain.infrastructure.client;
 
-import lombok.NonNull;
 import madp.appdeployment.domain.infrastructure.client.fallback.JenkinsClientFallback;
 import madp.appdeployment.domain.infrastructure.client.response.JenkinsCrumbResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
