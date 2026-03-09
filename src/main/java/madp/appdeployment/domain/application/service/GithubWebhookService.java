@@ -228,7 +228,7 @@ public class GithubWebhookService {
                 .repositoryId(pushPayload.repository().id())
                 .branch(pushPayload.getBranchName())
                 .projectId(appDeploymentEntity.getProjectId())
-                .appId(pushPayload.repository().id())
+                .appId(appDeploymentEntity.getId())
                 .repositoryFullName(pushPayload.repository().fullName())
                 .build();
 
