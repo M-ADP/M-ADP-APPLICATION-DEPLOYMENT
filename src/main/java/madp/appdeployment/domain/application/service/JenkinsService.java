@@ -18,7 +18,7 @@ import java.util.Collections;
 @Service
 @RequiredArgsConstructor
 public class JenkinsService {
-    private static final int MB_PER_GB = 1024;
+    private static final int MI_PER_GB = 1024;
     private final AppDeploymentRepository appDeploymentRepository;
     private final AppDeploymentTagRepository appDeploymentTagRepository;
     private final ResourceClient resourceClient;
@@ -53,15 +53,15 @@ public class JenkinsService {
                                                 AppDeploymentRequestDto.ResourcesDto.builder()
                                                         .limits(
                                                                 AppDeploymentRequestDto.ResourceDto.builder()
-                                                                        .cpu(appDeploymentEntity.getResourceInfo().getCpu().toString())
-                                                                        .memory(String.valueOf(toMb(appDeploymentEntity.getResourceInfo().getMemory())))
+                                                                        .cpu(toMilliCpu(appDeploymentEntity.getResourceInfo().getCpu()))
+                                                                        .memory(toMi(appDeploymentEntity.getResourceInfo().getMemory()))
                                                                         .build()
                                                         )
                                                         .build()
                                         )
                                         .disk(
                                                 AppDeploymentRequestDto.DiskDto.builder()
-                                                        .size(String.valueOf(toMb(appDeploymentEntity.getResourceInfo().getDisk())))
+                                                        .size(toMi(appDeploymentEntity.getResourceInfo().getDisk()))
                                                         .build()
                                         )
                                         .build()
@@ -80,11 +80,15 @@ public class JenkinsService {
         appDeploymentEntity.updateStatus(AppDeploymentStatus.FAILED);
     }
 
-    private int toMb(Double gb) {
-        return (int) Math.round(gb * MB_PER_GB);
+    private String toMilliCpu(Double cpuCore) {
+        return Math.round(cpuCore * 1000) + "m";
     }
 
-    private int toMb(Integer gb) {
-        return gb * MB_PER_GB;
+    private String toMi(Double gb) {
+        return Math.round(gb * MI_PER_GB) + "Mi";
+    }
+
+    private String toMi(Integer gb) {
+        return (gb * MI_PER_GB) + "Mi";
     }
 }

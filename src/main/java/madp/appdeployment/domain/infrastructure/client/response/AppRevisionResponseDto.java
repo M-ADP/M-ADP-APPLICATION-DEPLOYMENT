@@ -7,13 +7,13 @@ public record AppRevisionResponseDto(
         String applicationId,
 
         @JsonProperty("max_cpu")
-        Integer maxCpu,
+        String maxCpu,
 
         @JsonProperty("max_memory")
-        Integer maxMemory,
+        String maxMemory,
 
         @JsonProperty("max_disk")
-        Integer maxDisk,
+        String maxDisk,
 
         @JsonProperty("revised")
         boolean revised

@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AppDeploymentService {
-    private static final int MB_PER_GB = 1024;
+    private static final int MI_PER_GB = 1024;
     private final AppDeploymentRepository appDeploymentRepository;
     private final GithubAllowedRepoRepository githubAllowedRepoRepository;
     private final ProjectClient projectClient;
@@ -86,9 +86,9 @@ public class AppDeploymentService {
         resourceClient.reviseApp(
                 new AppRevisionRequestDto(
                         appDeploymentId.toString(),
-                        resourceInfo.getCpu(),
-                        toMb(resourceInfo.getMemory()),
-                        toMb(resourceInfo.getDisk())
+                        toMilliCpu(resourceInfo.getCpu()),
+                        toMi(resourceInfo.getMemory()),
+                        toMi(resourceInfo.getDisk())
                 )
         );
 
@@ -202,11 +202,15 @@ public class AppDeploymentService {
         return Math.min((int) Math.round(weightedAverage), 100);
     }
 
-    private int toMb(Double gb) {
-        return (int) Math.round(gb * MB_PER_GB);
+    private String toMilliCpu(Double cpuCore) {
+        return Math.round(cpuCore * 1000) + "m";
     }
 
-    private int toMb(Integer gb) {
-        return gb * MB_PER_GB;
+    private String toMi(Double gb) {
+        return Math.round(gb * MI_PER_GB) + "Mi";
+    }
+
+    private String toMi(Integer gb) {
+        return (gb * MI_PER_GB) + "Mi";
     }
 }
