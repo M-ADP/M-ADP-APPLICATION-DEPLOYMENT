@@ -57,4 +57,4 @@ jenkins:
 
 logging:
   level:
-    root: TRACE
+    root: INFO
