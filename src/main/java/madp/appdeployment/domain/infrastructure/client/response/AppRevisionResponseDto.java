@@ -10,7 +10,7 @@ public record AppRevisionResponseDto(
         Integer maxCpu,
 
         @JsonProperty("max_memory")
-        Double maxMemory,
+        Integer maxMemory,
 
         @JsonProperty("max_disk")
         Integer maxDisk,

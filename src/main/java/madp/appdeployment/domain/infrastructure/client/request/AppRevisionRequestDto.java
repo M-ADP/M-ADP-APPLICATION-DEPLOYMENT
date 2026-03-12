@@ -2,7 +2,7 @@ package madp.appdeployment.domain.infrastructure.client.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -20,13 +20,14 @@ public record AppRevisionRequestDto(
 
         @JsonProperty("max_memory")
         @NotNull(message = "max_memory는 존재해야 합니다.")
-        @DecimalMin(value = "0.25", message = "max_memory는 0.25 이상이어야 합니다.")
-        @DecimalMax(value = "1.0", message = "max_memory는 1.0 이하이어야 합니다.")
-        Double maxMemory,
+        @Min(value = 256, message = "max_memory는 256MB 이상이어야 합니다.")
+        @Max(value = 1024, message = "max_memory는 1024MB 이하이어야 합니다.")
+        Integer maxMemory,
 
         @JsonProperty("max_disk")
         @NotNull(message = "max_disk는 존재해야 합니다.")
-        @Min(value = 1, message = "max_disk는 1 이상이어야 합니다.")
+        @Min(value = 2048, message = "max_disk는 2048MB 이상이어야 합니다.")
+        @Max(value = 51200, message = "max_disk는 51200MB 이하이어야 합니다.")
         Integer maxDisk
 ) {
 }

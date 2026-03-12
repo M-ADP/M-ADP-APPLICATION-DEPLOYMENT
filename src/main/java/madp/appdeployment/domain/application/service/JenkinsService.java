@@ -18,6 +18,7 @@ import java.util.Collections;
 @Service
 @RequiredArgsConstructor
 public class JenkinsService {
+    private static final int MB_PER_GB = 1024;
     private final AppDeploymentRepository appDeploymentRepository;
     private final AppDeploymentTagRepository appDeploymentTagRepository;
     private final ResourceClient resourceClient;
@@ -53,14 +54,14 @@ public class JenkinsService {
                                                         .limits(
                                                                 AppDeploymentRequestDto.ResourceDto.builder()
                                                                         .cpu(appDeploymentEntity.getResourceInfo().getCpu().toString())
-                                                                        .memory(appDeploymentEntity.getResourceInfo().getMemory().toString())
+                                                                        .memory(String.valueOf(toMb(appDeploymentEntity.getResourceInfo().getMemory())))
                                                                         .build()
                                                         )
                                                         .build()
                                         )
                                         .disk(
                                                 AppDeploymentRequestDto.DiskDto.builder()
-                                                        .size(appDeploymentEntity.getResourceInfo().getDisk().toString())
+                                                        .size(String.valueOf(toMb(appDeploymentEntity.getResourceInfo().getDisk())))
                                                         .build()
                                         )
                                         .build()
@@ -77,5 +78,13 @@ public class JenkinsService {
     public void failTrigger(Long repositoryId) {
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findByGithubRepository_RepositoryId(repositoryId).orElseThrow(AppDeploymentNotFoundException::new);
         appDeploymentEntity.updateStatus(AppDeploymentStatus.FAILED);
+    }
+
+    private int toMb(Double gb) {
+        return (int) Math.round(gb * MB_PER_GB);
+    }
+
+    private int toMb(Integer gb) {
+        return gb * MB_PER_GB;
     }
 }

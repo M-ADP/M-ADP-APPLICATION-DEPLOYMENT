@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AppDeploymentService {
+    private static final int MB_PER_GB = 1024;
     private final AppDeploymentRepository appDeploymentRepository;
     private final GithubAllowedRepoRepository githubAllowedRepoRepository;
     private final ProjectClient projectClient;
@@ -86,8 +87,8 @@ public class AppDeploymentService {
                 new AppRevisionRequestDto(
                         appDeploymentId.toString(),
                         resourceInfo.getCpu(),
-                        resourceInfo.getMemory(),
-                        resourceInfo.getDisk()
+                        toMb(resourceInfo.getMemory()),
+                        toMb(resourceInfo.getDisk())
                 )
         );
 
@@ -199,5 +200,13 @@ public class AppDeploymentService {
                                 (diskPercentage * diskWeight);
         
         return Math.min((int) Math.round(weightedAverage), 100);
+    }
+
+    private int toMb(Double gb) {
+        return (int) Math.round(gb * MB_PER_GB);
+    }
+
+    private int toMb(Integer gb) {
+        return gb * MB_PER_GB;
     }
 }
