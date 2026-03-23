@@ -1,19 +1,23 @@
 package madp.appdeployment.domain.application.service;
 
 import lombok.RequiredArgsConstructor;
+import madp.appdeployment.domain.application.support.ProjectResourceLockManager;
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.domain.entity.GithubAllowedRepoEntity;
 import madp.appdeployment.domain.domain.repository.AppDeploymentRepository;
 import madp.appdeployment.domain.domain.repository.GithubAllowedRepoRepository;
+import madp.appdeployment.domain.domain.repository.dto.ProjectResourceUsageSumDto;
 import madp.appdeployment.domain.domain.vo.ResourceInfo;
 import madp.appdeployment.domain.exception.AppDeploymentNotFoundException;
 import madp.appdeployment.domain.exception.GithubAllowedRepoNotFoundException;
+import madp.appdeployment.domain.exception.InvalidResourceInfoException;
 import madp.appdeployment.domain.exception.ProjectAccessDeniedException;
 import madp.appdeployment.domain.infrastructure.client.ProjectClient;
 import madp.appdeployment.domain.infrastructure.client.ResourceClient;
 import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseDto;
+import madp.appdeployment.domain.infrastructure.client.response.ProjectResourceLimitResponseDto;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
@@ -37,26 +41,30 @@ public class AppDeploymentService {
     private final GithubAllowedRepoRepository githubAllowedRepoRepository;
     private final ProjectClient projectClient;
     private final ResourceClient resourceClient;
+    private final ProjectResourceLockManager projectResourceLockManager;
 
     @Transactional
     public Long createAppDeployment(CreateAppDeploymentRequestDto createAppDeploymentRequestDto) {
-        if(!projectClient.getProjectOwner(createAppDeploymentRequestDto.projectId()).data().status())
-            throw new ProjectAccessDeniedException();
+        return projectResourceLockManager.executeWithLock(createAppDeploymentRequestDto.projectId(), () -> {
+            if(!projectClient.getProjectOwner(createAppDeploymentRequestDto.projectId()).data().status())
+                throw new ProjectAccessDeniedException();
 
-        ResourceInfo resourceInfo = ResourceInfo.builder()
-                .cpu(createAppDeploymentRequestDto.cpu())
-                .disk(createAppDeploymentRequestDto.disk())
-                .memory(createAppDeploymentRequestDto.memory())
-                .build();
+            ResourceInfo resourceInfo = ResourceInfo.builder()
+                    .cpu(createAppDeploymentRequestDto.cpu())
+                    .disk(createAppDeploymentRequestDto.disk())
+                    .memory(createAppDeploymentRequestDto.memory())
+                    .build();
+            validateProjectResourceLimitForCreate(createAppDeploymentRequestDto.projectId(), resourceInfo);
 
-        AppDeploymentEntity appDeploymentEntity = AppDeploymentEntity.builder()
-                .name(createAppDeploymentRequestDto.name())
-                .port(createAppDeploymentRequestDto.port())
-                .projectId(createAppDeploymentRequestDto.projectId())
-                .resourceInfo(resourceInfo)
-                .build();
+            AppDeploymentEntity appDeploymentEntity = AppDeploymentEntity.builder()
+                    .name(createAppDeploymentRequestDto.name())
+                    .port(createAppDeploymentRequestDto.port())
+                    .projectId(createAppDeploymentRequestDto.projectId())
+                    .resourceInfo(resourceInfo)
+                    .build();
 
-        return appDeploymentRepository.save(appDeploymentEntity).getId();
+            return appDeploymentRepository.save(appDeploymentEntity).getId();
+        });
     }
 
     @Transactional
@@ -77,22 +85,63 @@ public class AppDeploymentService {
 
     @Transactional
     public void updateAppDeploymentResourceInfo(Long appDeploymentId, ResourceInfo resourceInfo) {
-        AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(appDeploymentId)
+        String projectId = appDeploymentRepository.findProjectIdById(appDeploymentId)
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
-        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status())
-            throw new ProjectAccessDeniedException();
+        projectResourceLockManager.executeWithLock(projectId, () -> {
+            AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(appDeploymentId)
+                    .orElseThrow(AppDeploymentNotFoundException::new);
 
-        resourceClient.reviseApp(
-                new AppRevisionRequestDto(
-                        appDeploymentId.toString(),
-                        toMilliCpu(resourceInfo.getCpu()),
-                        toMi(resourceInfo.getMemory()),
-                        toMi(resourceInfo.getDisk())
-                )
+            if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status())
+                throw new ProjectAccessDeniedException();
+
+            validateProjectResourceLimitForUpdate(appDeploymentEntity, resourceInfo);
+
+            resourceClient.reviseApp(
+                    new AppRevisionRequestDto(
+                            appDeploymentId.toString(),
+                            toMilliCpu(resourceInfo.getCpu()),
+                            toMi(resourceInfo.getMemory()),
+                            toMi(resourceInfo.getDisk())
+                    )
+            );
+
+            appDeploymentEntity.updateResourceInfo(resourceInfo);
+        });
+    }
+
+    private void validateProjectResourceLimitForCreate(String projectId, ResourceInfo targetResourceInfo) {
+        ProjectResourceUsageSumDto currentUsage = appDeploymentRepository.sumResourceUsageByProjectId(projectId);
+        validateProjectResourceLimit(projectId, targetResourceInfo, currentUsage);
+    }
+
+    private void validateProjectResourceLimitForUpdate(AppDeploymentEntity appDeploymentEntity, ResourceInfo targetResourceInfo) {
+        ProjectResourceUsageSumDto currentUsage = appDeploymentRepository.sumResourceUsageByProjectIdExcludingAppId(
+                appDeploymentEntity.getProjectId(),
+                appDeploymentEntity.getId()
         );
+        validateProjectResourceLimit(appDeploymentEntity.getProjectId(), targetResourceInfo, currentUsage);
+    }
 
-        appDeploymentEntity.updateResourceInfo(resourceInfo);
+    private void validateProjectResourceLimit(
+            String projectId,
+            ResourceInfo targetResourceInfo,
+            ProjectResourceUsageSumDto currentUsage
+    ) {
+        ProjectResourceLimitResponseDto projectResourceLimit = projectClient.getProjectResourceLimit(projectId).data();
+        double totalCpu = currentUsage.totalCpu().doubleValue() + targetResourceInfo.getCpu();
+        double totalMemory = currentUsage.totalMemory().doubleValue() + targetResourceInfo.getMemory();
+        double totalDisk = currentUsage.totalDisk().doubleValue() + targetResourceInfo.getDisk();
+
+        if (totalCpu > projectResourceLimit.maxCpu()) {
+            throw new InvalidResourceInfoException("프로젝트 최대 CPU 한도를 초과했습니다.");
+        }
+        if (totalMemory > projectResourceLimit.maxMemory()) {
+            throw new InvalidResourceInfoException("프로젝트 최대 메모리 한도를 초과했습니다.");
+        }
+        if (totalDisk > projectResourceLimit.maxDisk()) {
+            throw new InvalidResourceInfoException("프로젝트 최대 디스크 한도를 초과했습니다.");
+        }
     }
 
     @Transactional
