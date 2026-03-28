@@ -1,6 +1,7 @@
 package madp.appdeployment.domain.application.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import madp.appdeployment.domain.application.support.ProjectResourceLockManager;
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.domain.entity.GithubAllowedRepoEntity;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AppDeploymentService {
@@ -45,9 +47,19 @@ public class AppDeploymentService {
 
     @Transactional
     public Long createAppDeployment(CreateAppDeploymentRequestDto createAppDeploymentRequestDto) {
+        log.info("[createAppDeployment] 요청 - projectId={}, name={}, port={}, cpu={}, memory={}, disk={}",
+                createAppDeploymentRequestDto.projectId(),
+                createAppDeploymentRequestDto.name(),
+                createAppDeploymentRequestDto.port(),
+                createAppDeploymentRequestDto.cpu(),
+                createAppDeploymentRequestDto.memory(),
+                createAppDeploymentRequestDto.disk());
+
         return projectResourceLockManager.executeWithLock(createAppDeploymentRequestDto.projectId(), () -> {
-            if(!projectClient.getProjectOwner(createAppDeploymentRequestDto.projectId()).data().status())
+            if(!projectClient.getProjectOwner(createAppDeploymentRequestDto.projectId()).data().status()) {
+                log.warn("[createAppDeployment] 프로젝트 오너 권한 없음 - projectId={}", createAppDeploymentRequestDto.projectId());
                 throw new ProjectAccessDeniedException();
+            }
 
             ResourceInfo resourceInfo = ResourceInfo.builder()
                     .cpu(createAppDeploymentRequestDto.cpu())
@@ -63,28 +75,41 @@ public class AppDeploymentService {
                     .resourceInfo(resourceInfo)
                     .build();
 
-            return appDeploymentRepository.save(appDeploymentEntity).getId();
+            Long savedId = appDeploymentRepository.save(appDeploymentEntity).getId();
+            log.info("[createAppDeployment] 완료 - appDeploymentId={}", savedId);
+            return savedId;
         });
     }
 
     @Transactional
     public void deleteAppDeployment(Long appDeploymentId) {
+        log.info("[deleteAppDeployment] 요청 - appDeploymentId={}", appDeploymentId);
+
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(appDeploymentId)
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
+        log.info("[deleteAppDeployment] 앱 조회 완료 - appDeploymentId={}, projectId={}, name={}",
+                appDeploymentId, appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
+
         // 프로젝트 오너인지 확인하도록 변경 - 현재는 프로젝트 멤버인지 판별하는 로직임
-        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status())
+        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status()) {
+            log.warn("[deleteAppDeployment] 프로젝트 오너 권한 없음 - projectId={}", appDeploymentEntity.getProjectId());
             throw new ProjectAccessDeniedException();
+        }
 
         // AppDeployment 삭제 시, 관련된 리소스(jenkins) 해제
         resourceClient.deleteAppDeployment(appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
+        log.info("[deleteAppDeployment] 리소스 삭제 요청 완료 - projectId={}, name={}", appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
 
         appDeploymentRepository.delete(appDeploymentEntity);
-
+        log.info("[deleteAppDeployment] 완료 - appDeploymentId={}", appDeploymentId);
     }
 
     @Transactional
     public void updateAppDeploymentResourceInfo(Long appDeploymentId, ResourceInfo resourceInfo) {
+        log.info("[updateAppDeploymentResourceInfo] 요청 - appDeploymentId={}, cpu={}, memory={}, disk={}",
+                appDeploymentId, resourceInfo.getCpu(), resourceInfo.getMemory(), resourceInfo.getDisk());
+
         String projectId = appDeploymentRepository.findProjectIdById(appDeploymentId)
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
@@ -92,8 +117,10 @@ public class AppDeploymentService {
             AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(appDeploymentId)
                     .orElseThrow(AppDeploymentNotFoundException::new);
 
-            if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status())
+            if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status()) {
+                log.warn("[updateAppDeploymentResourceInfo] 프로젝트 오너 권한 없음 - projectId={}", appDeploymentEntity.getProjectId());
                 throw new ProjectAccessDeniedException();
+            }
 
             validateProjectResourceLimitForUpdate(appDeploymentEntity, resourceInfo);
 
@@ -107,6 +134,7 @@ public class AppDeploymentService {
             );
 
             appDeploymentEntity.updateResourceInfo(resourceInfo);
+            log.info("[updateAppDeploymentResourceInfo] 완료 - appDeploymentId={}", appDeploymentId);
         });
     }
 
@@ -146,31 +174,46 @@ public class AppDeploymentService {
 
     @Transactional
     public void updateGithubInfo(UpdateGithubInfoRequestDto updateGithubInfoRequestDto) {
+        log.info("[updateGithubInfo] 요청 - appDeploymentId={}, owner={}, repository={}, branch={}",
+                updateGithubInfoRequestDto.appDeploymentId(),
+                updateGithubInfoRequestDto.owner(),
+                updateGithubInfoRequestDto.repository(),
+                updateGithubInfoRequestDto.branch());
+
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(updateGithubInfoRequestDto.appDeploymentId())
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
-        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status())
+        if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status()) {
+            log.warn("[updateGithubInfo] 프로젝트 오너 권한 없음 - projectId={}", appDeploymentEntity.getProjectId());
             throw new ProjectAccessDeniedException();
+        }
 
         String repositoryFullName = updateGithubInfoRequestDto.owner() + "/" + updateGithubInfoRequestDto.repository();
         GithubAllowedRepoEntity githubAllowedRepoEntity = githubAllowedRepoRepository.findByRepositoryFullName(repositoryFullName).orElseThrow(GithubAllowedRepoNotFoundException::new);
 
         appDeploymentEntity.uploadGithubInfo(updateGithubInfoRequestDto.branch(), githubAllowedRepoEntity);
+        log.info("[updateGithubInfo] 완료 - appDeploymentId={}, repositoryFullName={}", updateGithubInfoRequestDto.appDeploymentId(), repositoryFullName);
     }
 
     @Transactional(readOnly = true)
     public List<AppDeploymentStatusResponseDto> getAppDeploymentsByProjectId(String projectId) {
-        if(!projectClient.getProjectAvailable(projectId).data().status())
+        log.info("[getAppDeploymentsByProjectId] 요청 - projectId={}", projectId);
+
+        if(!projectClient.getProjectAvailable(projectId).data().status()) {
+            log.warn("[getAppDeploymentsByProjectId] 프로젝트 접근 권한 없음 - projectId={}", projectId);
             throw new ProjectAccessDeniedException();
+        }
 
         List<AppDeploymentEntity> appDeploymentEntities = appDeploymentRepository.findAllByProjectId(projectId);
         List<String> names = appDeploymentEntities.stream().map(AppDeploymentEntity::getName).toList();
+        log.info("[getAppDeploymentsByProjectId] 조회된 앱 목록 - projectId={}, appNames={}", projectId, names);
+
         ApiResponseDto<List<AppDeploymentResourceStatusResponseDto.AppResourceDto>> appDeploymentResourceStatusResponseDto =
                 resourceClient.getAppDeploymentResourceStatus(projectId, names);
         Map<String, AppDeploymentEntity> appDeploymentEntityMap = appDeploymentEntities.stream()
                 .collect(Collectors.toMap(AppDeploymentEntity::getName, Function.identity()));
 
-        return appDeploymentResourceStatusResponseDto.data().stream().map(
+        List<AppDeploymentStatusResponseDto> result = appDeploymentResourceStatusResponseDto.data().stream().map(
                 (appResourceDto) -> {
                     AppDeploymentEntity appDeployment = appDeploymentEntityMap.get(appResourceDto.appId());
                     return AppDeploymentStatusResponseDto.builder()
@@ -182,26 +225,39 @@ public class AppDeploymentService {
                             .build();
                 }
         ).toList();
+
+        log.info("[getAppDeploymentsByProjectId] 완료 - projectId={}, resultCount={}", projectId, result.size());
+        return result;
     }
 
     @Transactional(readOnly = true)
     public String getLogs(String projectId, String appName) {
-        if(!projectClient.getProjectAvailable(projectId).data().status())
+        log.info("[getLogs] 요청 - projectId={}, appName={}", projectId, appName);
+
+        if(!projectClient.getProjectAvailable(projectId).data().status()) {
+            log.warn("[getLogs] 프로젝트 접근 권한 없음 - projectId={}", projectId);
             throw new ProjectAccessDeniedException();
+        }
 
         ApiResponseDto<PodLogsResponseDto.LogDataDto> podLogsResponseDto = resourceClient.getPodLogs(projectId, appName);
-        return podLogsResponseDto.data().podLogs().getFirst().logs();
+        String logs = podLogsResponseDto.data().podLogs().getFirst().logs();
+        log.info("[getLogs] 완료 - projectId={}, appName={}, logLength={}", projectId, appName, logs.length());
+        return logs;
     }
 
     @Transactional(readOnly = true)
     public AppResourceStatusResponseDto getAppDeploymentByProjectIdAndAppName(String projectId, String appName) {
-        if(!projectClient.getProjectAvailable(projectId).data().status())
+        log.info("[getAppDeploymentByProjectIdAndAppName] 요청 - projectId={}, appName={}", projectId, appName);
+
+        if(!projectClient.getProjectAvailable(projectId).data().status()) {
+            log.warn("[getAppDeploymentByProjectIdAndAppName] 프로젝트 접근 권한 없음 - projectId={}", projectId);
             throw new ProjectAccessDeniedException();
+        }
 
         AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto =
                 resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).data().getFirst();
 
-        return AppResourceStatusResponseDto.builder()
+        AppResourceStatusResponseDto result = AppResourceStatusResponseDto.builder()
                     .appId(Long.parseLong(appResourceDto.appId()))
                     .cpuUsagePercentage(appResourceDto.cpu().percentage())
                     .memoryUsed(appResourceDto.memory().used())
@@ -211,12 +267,20 @@ public class AppDeploymentService {
                     .currentInstances(appResourceDto.instance().used())
                     .availableInstances(appResourceDto.instance().limit())
                     .build();
+
+        log.info("[getAppDeploymentByProjectIdAndAppName] 완료 - projectId={}, appName={}, cpuUsage={}, memoryUsed={}/{}",
+                projectId, appName, result.cpuUsagePercentage(), result.memoryUsed(), result.memoryTotal());
+        return result;
     }
 
     @Transactional(readOnly = true)
     public AppDeploymentInfoResponseDto getDetailsProjectIdAndAppName(String projectId, String appName) {
-        if(!projectClient.getProjectAvailable(projectId).data().status())
+        log.info("[getDetailsProjectIdAndAppName] 요청 - projectId={}, appName={}", projectId, appName);
+
+        if(!projectClient.getProjectAvailable(projectId).data().status()) {
+            log.warn("[getDetailsProjectIdAndAppName] 프로젝트 접근 권한 없음 - projectId={}", projectId);
             throw new ProjectAccessDeniedException();
+        }
 
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
                 .orElseThrow(AppDeploymentNotFoundException::new);
@@ -230,13 +294,17 @@ public class AppDeploymentService {
                 appResourceDto.disk().percentage()
         );
 
-        return AppDeploymentInfoResponseDto.builder()
+        AppDeploymentInfoResponseDto result = AppDeploymentInfoResponseDto.builder()
                 .appId(Long.parseLong(appResourceDto.appId()))
                 .port(appDeploymentEntity.getPort())
                 .resourceUsePercentage(resourceUsePercentage)
                 .githubRepositoryUrl(appDeploymentEntity.getGithubRepository().getRepositoryFullName())
                 .status(appDeploymentEntity.getStatus().name())
                 .build();
+
+        log.info("[getDetailsProjectIdAndAppName] 완료 - projectId={}, appName={}, status={}, resourceUsePercentage={}",
+                projectId, appName, result.status(), result.resourceUsePercentage());
+        return result;
     }
 
     private int calculateWeightedResourceUsage(int memoryPercentage, int cpuPercentage, int diskPercentage) {
