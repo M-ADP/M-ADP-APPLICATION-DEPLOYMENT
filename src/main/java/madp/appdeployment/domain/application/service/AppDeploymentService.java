@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import madp.appdeployment.domain.application.support.ProjectResourceLockManager;
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.domain.entity.GithubAllowedRepoEntity;
+import madp.appdeployment.domain.domain.enums.AppDeploymentStatus;
 import madp.appdeployment.domain.domain.repository.AppDeploymentRepository;
 import madp.appdeployment.domain.domain.repository.GithubAllowedRepoRepository;
 import madp.appdeployment.domain.domain.repository.dto.ProjectResourceUsageSumDto;
@@ -22,7 +23,9 @@ import madp.appdeployment.domain.infrastructure.client.response.ProjectResourceL
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentSummaryResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.stereotype.Service;
@@ -304,6 +307,64 @@ public class AppDeploymentService {
 
         log.info("[getDetailsProjectIdAndAppName] 완료 - projectId={}, appName={}, status={}, resourceUsePercentage={}",
                 projectId, appName, result.status(), result.resourceUsePercentage());
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppDeploymentListResponseDto> getAppDeploymentListByProjectId(Long projectId) {
+        log.info("[getAppDeploymentListByProjectId] 요청 - projectId={}", projectId);
+
+        if (!projectClient.getProjectAvailable(String.valueOf(projectId)).data().status()) {
+            log.warn("[getAppDeploymentListByProjectId] 프로젝트 접근 권한 없음 - projectId={}", projectId);
+            throw new ProjectAccessDeniedException();
+        }
+
+        List<AppDeploymentEntity> apps = appDeploymentRepository.findAllByProjectId(String.valueOf(projectId));
+        List<String> names = apps.stream().map(AppDeploymentEntity::getName).toList();
+
+        Map<String, AppDeploymentResourceStatusResponseDto.AppResourceDto> resourceMap =
+                resourceClient.getAppDeploymentResourceStatus(String.valueOf(projectId), names).data().stream()
+                        .collect(Collectors.toMap(AppDeploymentResourceStatusResponseDto.AppResourceDto::appId, Function.identity()));
+
+        List<AppDeploymentListResponseDto> result = apps.stream().map(app -> {
+            AppDeploymentResourceStatusResponseDto.AppResourceDto resource = resourceMap.get(app.getName());
+            return AppDeploymentListResponseDto.builder()
+                    .id(app.getId())
+                    .name(app.getName())
+                    .podCount(resource != null ? resource.instance().used() : 0)
+                    .exposedPort(app.getPort())
+                    .cpuUsagePercent(resource != null ? resource.cpu().percentage().doubleValue() : 0.0)
+                    .ramUsagePercent(resource != null ? resource.memory().percentage().doubleValue() : 0.0)
+                    .healthStatus(app.getStatus().name())
+                    .build();
+        }).toList();
+
+        log.info("[getAppDeploymentListByProjectId] 완료 - projectId={}, resultCount={}", projectId, result.size());
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppDeploymentSummaryResponseDto> getAppDeploymentSummary(List<Long> projectIds) {
+        log.info("[getAppDeploymentSummary] 요청 - projectIds={}", projectIds);
+
+        List<AppDeploymentSummaryResponseDto> result = projectIds.stream().map(projectId -> {
+            List<AppDeploymentEntity> apps = appDeploymentRepository.findAllByProjectId(String.valueOf(projectId));
+
+            int running = (int) apps.stream()
+                    .filter(app -> app.getStatus() == AppDeploymentStatus.RUNNING)
+                    .count();
+            int warning = apps.size() - running;
+            String state = (warning == 0) ? "RUNNING" : "STOPPED";
+
+            return AppDeploymentSummaryResponseDto.builder()
+                    .projectId(projectId)
+                    .running(running)
+                    .warning(warning)
+                    .state(state)
+                    .build();
+        }).toList();
+
+        log.info("[getAppDeploymentSummary] 완료 - resultCount={}", result.size());
         return result;
     }
 
