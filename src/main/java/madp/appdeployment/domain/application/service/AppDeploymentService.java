@@ -106,6 +106,24 @@ public class AppDeploymentService {
     }
 
     @Transactional
+    public void deleteAppDeploymentListByProjectId(Long projectId) {
+        String projectIdValue = String.valueOf(projectId);
+        log.info("[deleteAppDeploymentListByProjectId] 요청 - projectId={}", projectIdValue);
+
+        List<AppDeploymentEntity> appDeployments = appDeploymentRepository.findAllByProjectId(projectIdValue);
+        log.info("[deleteAppDeploymentListByProjectId] 조회된 앱 수 - projectId={}, count={}", projectIdValue, appDeployments.size());
+
+        for (AppDeploymentEntity appDeployment : appDeployments) {
+            resourceClient.deleteAppDeployment(appDeployment.getProjectId(), appDeployment.getName());
+            log.info("[deleteAppDeploymentListByProjectId] 리소스 삭제 요청 완료 - projectId={}, name={}",
+                    appDeployment.getProjectId(), appDeployment.getName());
+        }
+
+        appDeploymentRepository.deleteAll(appDeployments);
+        log.info("[deleteAppDeploymentListByProjectId] 완료 - projectId={}, deletedCount={}", projectIdValue, appDeployments.size());
+    }
+
+    @Transactional
     public void updateAppDeploymentResourceInfo(Long appDeploymentId, ResourceInfo resourceInfo) {
         log.info("[updateAppDeploymentResourceInfo] 요청 - appDeploymentId={}, cpu={}, memory={}, disk={}",
                 appDeploymentId, resourceInfo.getCpu(), resourceInfo.getMemory(), resourceInfo.getDisk());

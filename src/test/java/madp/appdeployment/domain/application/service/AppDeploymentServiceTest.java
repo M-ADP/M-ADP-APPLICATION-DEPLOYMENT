@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -201,6 +203,32 @@ class AppDeploymentServiceTest {
         );
 
         verify(resourceClient, never()).reviseApp(any(AppRevisionRequestDto.class));
+    }
+
+    @Test
+    void deleteAppDeploymentListByProjectIdDeletesAllProjectApps() {
+        AppDeploymentEntity apiServer = AppDeploymentEntity.builder()
+                .name("api-server")
+                .projectId("123")
+                .resourceInfo(ResourceInfo.builder().cpu(1.0).memory(0.5).disk(10).build())
+                .port(8080)
+                .build();
+        AppDeploymentEntity worker = AppDeploymentEntity.builder()
+                .name("worker")
+                .projectId("123")
+                .resourceInfo(ResourceInfo.builder().cpu(0.5).memory(0.25).disk(5).build())
+                .port(8081)
+                .build();
+        List<AppDeploymentEntity> appDeployments = List.of(apiServer, worker);
+
+        when(appDeploymentRepository.findAllByProjectId("123")).thenReturn(appDeployments);
+
+        appDeploymentService.deleteAppDeploymentListByProjectId(123L);
+
+        verify(resourceClient).deleteAppDeployment("123", "api-server");
+        verify(resourceClient).deleteAppDeployment("123", "worker");
+        verify(appDeploymentRepository).deleteAll(appDeployments);
+        verifyNoMoreInteractions(projectClient, githubAllowedRepoRepository, projectResourceLockManager);
     }
 
     private void setEntityId(AppDeploymentEntity appDeploymentEntity, Long id) {
