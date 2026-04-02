@@ -52,7 +52,7 @@ public class JenkinsService {
         String imageName = projectId + "/" + jenkinsSuccessTriggerRequestDto.repositoryId();
 
         AppDeploymentRequestDto appDeploymentRequestDto = AppDeploymentRequestDto.builder()
-                .name(projectId)
+                .name(appDeploymentEntity.getName())
                 .containers(
                         Collections.singletonList(
                                 AppDeploymentRequestDto.ContainerDto.builder()
