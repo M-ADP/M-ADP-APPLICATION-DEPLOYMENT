@@ -1,8 +1,10 @@
 package madp.appdeployment.domain.application.service;
 
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.domain.entity.GithubAllowedRepoEntity;
+import madp.appdeployment.domain.domain.enums.AppDeploymentStatus;
 import madp.appdeployment.domain.domain.repository.AppDeploymentRepository;
 import madp.appdeployment.domain.domain.repository.GithubAllowedRepoRepository;
 import madp.appdeployment.domain.domain.vo.ResourceInfo;
@@ -17,8 +19,11 @@ import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseD
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentSummaryResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
+import madp.appdeployment.global.infrastructure.feign.exception.FeignClientBadRequestException;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +35,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AppDeploymentService {
     private static final int MI_PER_GB = 1024;
@@ -69,7 +75,7 @@ public class AppDeploymentService {
             throw new ProjectAccessDeniedException();
 
         // AppDeployment 삭제 시, 관련된 리소스(jenkins) 해제
-        resourceClient.deleteAppDeployment(appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
+        deleteResourceApp(appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
 
         appDeploymentRepository.delete(appDeploymentEntity);
 
@@ -190,6 +196,63 @@ public class AppDeploymentService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public List<AppDeploymentListResponseDto> getAppDeploymentListByProjectId(Long projectId) {
+        if (!projectClient.getProjectAvailable(String.valueOf(projectId)).data().status())
+            throw new ProjectAccessDeniedException();
+
+        List<AppDeploymentEntity> apps = appDeploymentRepository.findAllByProjectId(String.valueOf(projectId));
+        List<String> names = apps.stream().map(AppDeploymentEntity::getName).toList();
+
+        Map<String, AppDeploymentResourceStatusResponseDto.AppResourceDto> resourceMap =
+                resourceClient.getAppDeploymentResourceStatus(String.valueOf(projectId), names).data().stream()
+                        .collect(Collectors.toMap(AppDeploymentResourceStatusResponseDto.AppResourceDto::appId, Function.identity()));
+
+        return apps.stream().map(app -> {
+            AppDeploymentResourceStatusResponseDto.AppResourceDto resource = resourceMap.get(app.getName());
+            return AppDeploymentListResponseDto.builder()
+                    .id(app.getId())
+                    .name(app.getName())
+                    .podCount(resource != null ? resource.instance().used() : 0)
+                    .exposedPort(app.getPort())
+                    .cpuUsagePercent(resource != null ? resource.cpu().percentage().doubleValue() : 0.0)
+                    .ramUsagePercent(resource != null ? resource.memory().percentage().doubleValue() : 0.0)
+                    .healthStatus(app.getStatus().name())
+                    .build();
+        }).toList();
+    }
+
+    @Transactional
+    public void deleteAppDeploymentListByProjectId(Long projectId) {
+        List<AppDeploymentEntity> appDeployments = appDeploymentRepository.findAllByProjectId(String.valueOf(projectId));
+
+        for (AppDeploymentEntity appDeployment : appDeployments) {
+            deleteResourceApp(appDeployment.getProjectId(), appDeployment.getName());
+        }
+
+        appDeploymentRepository.deleteAll(appDeployments);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppDeploymentSummaryResponseDto> getAppDeploymentSummary(List<Long> projectIds) {
+        return projectIds.stream().map(projectId -> {
+            List<AppDeploymentEntity> apps = appDeploymentRepository.findAllByProjectId(String.valueOf(projectId));
+
+            int running = (int) apps.stream()
+                    .filter(app -> app.getStatus() == AppDeploymentStatus.RUNNING)
+                    .count();
+            int warning = apps.size() - running;
+            String state = (warning == 0) ? "RUNNING" : "STOPPED";
+
+            return AppDeploymentSummaryResponseDto.builder()
+                    .projectId(projectId)
+                    .running(running)
+                    .warning(warning)
+                    .state(state)
+                    .build();
+        }).toList();
+    }
+
     private int calculateWeightedResourceUsage(int memoryPercentage, int cpuPercentage, int diskPercentage) {
         double memoryWeight = 0.5;
         double cpuWeight = 0.3; 
@@ -212,5 +275,39 @@ public class AppDeploymentService {
 
     private String toMi(Integer gb) {
         return (gb * MI_PER_GB) + "Mi";
+    }
+
+    private void deleteResourceApp(String projectId, String appName) {
+        try {
+            resourceClient.deleteAppDeployment(projectId, appName);
+        } catch (FeignClientBadRequestException e) {
+            if (e.isNotFound()) {
+                log.warn(
+                        "Resource app already missing during delete. projectId={}, appName={}, upstreamStatus={}, upstreamBody={}",
+                        projectId,
+                        appName,
+                        e.getUpstreamStatus(),
+                        truncateForLog(e.getUpstreamBody())
+                );
+                return;
+            }
+
+            log.warn(
+                    "Resource app delete rejected. projectId={}, appName={}, upstreamStatus={}, upstreamBody={}",
+                    projectId,
+                    appName,
+                    e.getUpstreamStatus(),
+                    truncateForLog(e.getUpstreamBody())
+            );
+            throw e;
+        }
+    }
+
+    private String truncateForLog(String body) {
+        if (body == null || body.isBlank()) {
+            return "<empty>";
+        }
+
+        return body.length() > 500 ? body.substring(0, 500) : body;
     }
 }

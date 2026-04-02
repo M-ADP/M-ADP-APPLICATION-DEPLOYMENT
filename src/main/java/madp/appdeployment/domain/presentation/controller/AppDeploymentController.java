@@ -6,10 +6,13 @@ import madp.appdeployment.domain.application.service.AppDeploymentService;
 import madp.appdeployment.domain.domain.vo.ResourceInfo;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.DeleteAppDeploymentRequestDto;
+import madp.appdeployment.domain.presentation.dto.request.GetAppDeploymentSummaryRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateResourceInfoRequestDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentSummaryResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.http.ResponseEntity;
@@ -103,6 +106,38 @@ public class AppDeploymentController {
                 ApiResponseDto.of(
                         "앱 리소스 상태 조회 성공",
                         appDeploymentService.getAppDeploymentByProjectIdAndAppName(projectId, appName)
+                )
+        );
+    }
+
+    @GetMapping("/projects/{project_id}/apps")
+    public ResponseEntity<ApiResponseDto<List<AppDeploymentListResponseDto>>> getAppDeploymentListByProjectId(
+            @PathVariable("project_id") Long projectId
+    ) {
+        return ResponseEntity.ok(
+                ApiResponseDto.of(
+                        "앱 목록을 조회했습니다.",
+                        appDeploymentService.getAppDeploymentListByProjectId(projectId)
+                )
+        );
+    }
+
+    @DeleteMapping("/projects/{project_id}/apps")
+    public ResponseEntity<Void> deleteAppDeploymentListByProjectId(
+            @PathVariable("project_id") Long projectId
+    ) {
+        appDeploymentService.deleteAppDeploymentListByProjectId(projectId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/summary")
+    public ResponseEntity<ApiResponseDto<List<AppDeploymentSummaryResponseDto>>> getAppDeploymentSummary(
+            @Valid @RequestBody GetAppDeploymentSummaryRequestDto getAppDeploymentSummaryRequestDto
+    ) {
+        return ResponseEntity.ok(
+                ApiResponseDto.of(
+                        "배포 요약을 조회했습니다.",
+                        appDeploymentService.getAppDeploymentSummary(getAppDeploymentSummaryRequestDto.projectIds())
                 )
         );
     }
