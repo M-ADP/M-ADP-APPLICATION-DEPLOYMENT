@@ -53,4 +53,7 @@ public interface AppDeploymentRepository extends JpaRepository<AppDeploymentEnti
 
     @Query("select ad.projectId from AppDeploymentEntity ad where ad.id = :appDeploymentId")
     Optional<String> findProjectIdById(Long appDeploymentId);
+
+    @Query("select count(ad) > 0 from AppDeploymentEntity ad where ad.githubRepository.repositoryId = :repositoryId and ad.id <> :excludeAppId")
+    boolean existsByGithubRepositoryIdExcludingAppId(Long repositoryId, Long excludeAppId);
 }

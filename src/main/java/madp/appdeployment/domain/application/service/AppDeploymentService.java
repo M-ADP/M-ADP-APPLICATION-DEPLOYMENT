@@ -12,6 +12,7 @@ import madp.appdeployment.domain.domain.repository.dto.ProjectResourceUsageSumDt
 import madp.appdeployment.domain.domain.vo.ResourceInfo;
 import madp.appdeployment.domain.exception.AppDeploymentNotFoundException;
 import madp.appdeployment.domain.exception.GithubAllowedRepoNotFoundException;
+import madp.appdeployment.domain.exception.InvalidAppDeploymentException;
 import madp.appdeployment.domain.exception.InvalidResourceInfoException;
 import madp.appdeployment.domain.exception.ProjectAccessDeniedException;
 import madp.appdeployment.domain.infrastructure.client.ProjectClient;
@@ -211,6 +212,10 @@ public class AppDeploymentService {
 
         String repositoryFullName = updateGithubInfoRequestDto.owner() + "/" + updateGithubInfoRequestDto.repository();
         GithubAllowedRepoEntity githubAllowedRepoEntity = githubAllowedRepoRepository.findByRepositoryFullName(repositoryFullName).orElseThrow(GithubAllowedRepoNotFoundException::new);
+
+        if (appDeploymentRepository.existsByGithubRepositoryIdExcludingAppId(githubAllowedRepoEntity.getRepositoryId(), updateGithubInfoRequestDto.appDeploymentId())) {
+            throw new InvalidAppDeploymentException("이미 다른 앱에 연결된 GitHub Repository입니다.");
+        }
 
         appDeploymentEntity.uploadGithubInfo(updateGithubInfoRequestDto.branch(), githubAllowedRepoEntity);
         log.info("[updateGithubInfo] 완료 - appDeploymentId={}, repositoryFullName={}", updateGithubInfoRequestDto.appDeploymentId(), repositoryFullName);
