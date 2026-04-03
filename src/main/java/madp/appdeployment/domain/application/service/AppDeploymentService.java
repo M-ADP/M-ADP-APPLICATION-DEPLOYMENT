@@ -1,8 +1,6 @@
 package madp.appdeployment.domain.application.service;
 
-import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import madp.appdeployment.domain.application.support.ProjectResourceLockManager;
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.domain.entity.GithubAllowedRepoEntity;
@@ -33,6 +31,8 @@ import madp.appdeployment.global.infrastructure.feign.exception.FeignClientBadRe
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
@@ -40,11 +40,10 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class AppDeploymentService {
+    private static final Logger log = LoggerFactory.getLogger(AppDeploymentService.class);
     private static final int MI_PER_GB = 1024;
     private final AppDeploymentRepository appDeploymentRepository;
     private final GithubAllowedRepoRepository githubAllowedRepoRepository;
@@ -98,13 +97,11 @@ public class AppDeploymentService {
         log.info("[deleteAppDeployment] 앱 조회 완료 - appDeploymentId={}, projectId={}, name={}",
                 appDeploymentId, appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
 
-        // 프로젝트 오너인지 확인하도록 변경 - 현재는 프로젝트 멤버인지 판별하는 로직임
         if(!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status()) {
             log.warn("[deleteAppDeployment] 프로젝트 오너 권한 없음 - projectId={}", appDeploymentEntity.getProjectId());
             throw new ProjectAccessDeniedException();
         }
 
-        // AppDeployment 삭제 시, 관련된 리소스(jenkins) 해제
         deleteResourceApp(appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
 
         appDeploymentRepository.delete(appDeploymentEntity);
@@ -120,9 +117,7 @@ public class AppDeploymentService {
         log.info("[deleteAppDeploymentListByProjectId] 조회된 앱 수 - projectId={}, count={}", projectIdValue, appDeployments.size());
 
         for (AppDeploymentEntity appDeployment : appDeployments) {
-            resourceClient.deleteAppDeployment(appDeployment.getProjectId(), appDeployment.getName());
-            log.info("[deleteAppDeploymentListByProjectId] 리소스 삭제 요청 완료 - projectId={}, name={}",
-                    appDeployment.getProjectId(), appDeployment.getName());
+            deleteResourceApp(appDeployment.getProjectId(), appDeployment.getName());
         }
 
         appDeploymentRepository.deleteAll(appDeployments);
@@ -160,40 +155,6 @@ public class AppDeploymentService {
             appDeploymentEntity.updateResourceInfo(resourceInfo);
             log.info("[updateAppDeploymentResourceInfo] 완료 - appDeploymentId={}", appDeploymentId);
         });
-    }
-
-    private void validateProjectResourceLimitForCreate(String projectId, ResourceInfo targetResourceInfo) {
-        ProjectResourceUsageSumDto currentUsage = appDeploymentRepository.sumResourceUsageByProjectId(projectId);
-        validateProjectResourceLimit(projectId, targetResourceInfo, currentUsage);
-    }
-
-    private void validateProjectResourceLimitForUpdate(AppDeploymentEntity appDeploymentEntity, ResourceInfo targetResourceInfo) {
-        ProjectResourceUsageSumDto currentUsage = appDeploymentRepository.sumResourceUsageByProjectIdExcludingAppId(
-                appDeploymentEntity.getProjectId(),
-                appDeploymentEntity.getId()
-        );
-        validateProjectResourceLimit(appDeploymentEntity.getProjectId(), targetResourceInfo, currentUsage);
-    }
-
-    private void validateProjectResourceLimit(
-            String projectId,
-            ResourceInfo targetResourceInfo,
-            ProjectResourceUsageSumDto currentUsage
-    ) {
-        ProjectResourceLimitResponseDto projectResourceLimit = projectClient.getProjectResourceLimit(projectId).data();
-        double totalCpu = currentUsage.totalCpu().doubleValue() + targetResourceInfo.getCpu();
-        double totalMemory = currentUsage.totalMemory().doubleValue() + targetResourceInfo.getMemory();
-        double totalDisk = currentUsage.totalDisk().doubleValue() + targetResourceInfo.getDisk();
-
-        if (totalCpu > projectResourceLimit.maxCpu()) {
-            throw new InvalidResourceInfoException("프로젝트 최대 CPU 한도를 초과했습니다.");
-        }
-        if (totalMemory > projectResourceLimit.maxMemory()) {
-            throw new InvalidResourceInfoException("프로젝트 최대 메모리 한도를 초과했습니다.");
-        }
-        if (totalDisk > projectResourceLimit.maxDisk()) {
-            throw new InvalidResourceInfoException("프로젝트 최대 디스크 한도를 초과했습니다.");
-        }
     }
 
     @Transactional
@@ -260,18 +221,22 @@ public class AppDeploymentService {
 
     @Transactional(readOnly = true)
     public List<AppDeploymentListResponseDto> getAppDeploymentListByProjectId(Long projectId) {
-        if (!projectClient.getProjectAvailable(String.valueOf(projectId)).data().status()) {
+        String projectIdValue = String.valueOf(projectId);
+        log.info("[getAppDeploymentListByProjectId] 요청 - projectId={}", projectIdValue);
+
+        if (!projectClient.getProjectAvailable(projectIdValue).data().status()) {
+            log.warn("[getAppDeploymentListByProjectId] 프로젝트 접근 권한 없음 - projectId={}", projectIdValue);
             throw new ProjectAccessDeniedException();
         }
 
-        List<AppDeploymentEntity> apps = appDeploymentRepository.findAllByProjectId(String.valueOf(projectId));
+        List<AppDeploymentEntity> apps = appDeploymentRepository.findAllByProjectId(projectIdValue);
         List<String> names = apps.stream().map(AppDeploymentEntity::getName).toList();
 
         Map<String, AppDeploymentResourceStatusResponseDto.AppResourceDto> resourceMap =
-                resourceClient.getAppDeploymentResourceStatus(String.valueOf(projectId), names).data().stream()
+                resourceClient.getAppDeploymentResourceStatus(projectIdValue, names).data().stream()
                         .collect(Collectors.toMap(AppDeploymentResourceStatusResponseDto.AppResourceDto::appId, Function.identity()));
 
-        return apps.stream().map(app -> {
+        List<AppDeploymentListResponseDto> result = apps.stream().map(app -> {
             AppDeploymentResourceStatusResponseDto.AppResourceDto resource = resourceMap.get(app.getName());
             return AppDeploymentListResponseDto.builder()
                     .id(app.getId())
@@ -283,10 +248,14 @@ public class AppDeploymentService {
                     .healthStatus(app.getStatus().name())
                     .build();
         }).toList();
+
+        log.info("[getAppDeploymentListByProjectId] 완료 - projectId={}, resultCount={}", projectIdValue, result.size());
+        return result;
     }
 
     @Transactional(readOnly = true)
     public List<AppDeploymentSummaryResponseDto> getAppDeploymentSummary(List<Long> projectIds) {
+        log.info("[getAppDeploymentSummary] 요청 - projectIds={}", projectIds);
         return projectIds.stream().map(projectId -> {
             List<AppDeploymentEntity> apps = appDeploymentRepository.findAllByProjectId(String.valueOf(projectId));
 
@@ -294,7 +263,7 @@ public class AppDeploymentService {
                     .filter(app -> app.getStatus() == AppDeploymentStatus.RUNNING)
                     .count();
             int warning = apps.size() - running;
-            String state = warning == 0 ? "RUNNING" : "STOPPED";
+            String state = (warning == 0) ? "RUNNING" : "STOPPED";
 
             return AppDeploymentSummaryResponseDto.builder()
                     .projectId(projectId)
@@ -382,61 +351,38 @@ public class AppDeploymentService {
         return result;
     }
 
-    @Transactional(readOnly = true)
-    public List<AppDeploymentListResponseDto> getAppDeploymentListByProjectId(Long projectId) {
-        if (!projectClient.getProjectAvailable(String.valueOf(projectId)).data().status())
-            throw new ProjectAccessDeniedException();
-
-        List<AppDeploymentEntity> apps = appDeploymentRepository.findAllByProjectId(String.valueOf(projectId));
-        List<String> names = apps.stream().map(AppDeploymentEntity::getName).toList();
-
-        Map<String, AppDeploymentResourceStatusResponseDto.AppResourceDto> resourceMap =
-                resourceClient.getAppDeploymentResourceStatus(String.valueOf(projectId), names).data().stream()
-                        .collect(Collectors.toMap(AppDeploymentResourceStatusResponseDto.AppResourceDto::appId, Function.identity()));
-
-        return apps.stream().map(app -> {
-            AppDeploymentResourceStatusResponseDto.AppResourceDto resource = resourceMap.get(app.getName());
-            return AppDeploymentListResponseDto.builder()
-                    .id(app.getId())
-                    .name(app.getName())
-                    .podCount(resource != null ? resource.instance().used() : 0)
-                    .exposedPort(app.getPort())
-                    .cpuUsagePercent(resource != null ? resource.cpu().percentage().doubleValue() : 0.0)
-                    .ramUsagePercent(resource != null ? resource.memory().percentage().doubleValue() : 0.0)
-                    .healthStatus(app.getStatus().name())
-                    .build();
-        }).toList();
+    private void validateProjectResourceLimitForCreate(String projectId, ResourceInfo targetResourceInfo) {
+        ProjectResourceUsageSumDto currentUsage = appDeploymentRepository.sumResourceUsageByProjectId(projectId);
+        validateProjectResourceLimit(projectId, targetResourceInfo, currentUsage);
     }
 
-    @Transactional
-    public void deleteAppDeploymentListByProjectId(Long projectId) {
-        List<AppDeploymentEntity> appDeployments = appDeploymentRepository.findAllByProjectId(String.valueOf(projectId));
+    private void validateProjectResourceLimitForUpdate(AppDeploymentEntity appDeploymentEntity, ResourceInfo targetResourceInfo) {
+        ProjectResourceUsageSumDto currentUsage = appDeploymentRepository.sumResourceUsageByProjectIdExcludingAppId(
+                appDeploymentEntity.getProjectId(),
+                appDeploymentEntity.getId()
+        );
+        validateProjectResourceLimit(appDeploymentEntity.getProjectId(), targetResourceInfo, currentUsage);
+    }
 
-        for (AppDeploymentEntity appDeployment : appDeployments) {
-            deleteResourceApp(appDeployment.getProjectId(), appDeployment.getName());
+    private void validateProjectResourceLimit(
+            String projectId,
+            ResourceInfo targetResourceInfo,
+            ProjectResourceUsageSumDto currentUsage
+    ) {
+        ProjectResourceLimitResponseDto projectResourceLimit = projectClient.getProjectResourceLimit(projectId).data();
+        double totalCpu = currentUsage.totalCpu().doubleValue() + targetResourceInfo.getCpu();
+        double totalMemory = currentUsage.totalMemory().doubleValue() + targetResourceInfo.getMemory();
+        double totalDisk = currentUsage.totalDisk().doubleValue() + targetResourceInfo.getDisk();
+
+        if (totalCpu > projectResourceLimit.maxCpu()) {
+            throw new InvalidResourceInfoException("프로젝트 최대 CPU 한도를 초과했습니다.");
         }
-
-        appDeploymentRepository.deleteAll(appDeployments);
-    }
-
-    @Transactional(readOnly = true)
-    public List<AppDeploymentSummaryResponseDto> getAppDeploymentSummary(List<Long> projectIds) {
-        return projectIds.stream().map(projectId -> {
-            List<AppDeploymentEntity> apps = appDeploymentRepository.findAllByProjectId(String.valueOf(projectId));
-
-            int running = (int) apps.stream()
-                    .filter(app -> app.getStatus() == AppDeploymentStatus.RUNNING)
-                    .count();
-            int warning = apps.size() - running;
-            String state = (warning == 0) ? "RUNNING" : "STOPPED";
-
-            return AppDeploymentSummaryResponseDto.builder()
-                    .projectId(projectId)
-                    .running(running)
-                    .warning(warning)
-                    .state(state)
-                    .build();
-        }).toList();
+        if (totalMemory > projectResourceLimit.maxMemory()) {
+            throw new InvalidResourceInfoException("프로젝트 최대 메모리 한도를 초과했습니다.");
+        }
+        if (totalDisk > projectResourceLimit.maxDisk()) {
+            throw new InvalidResourceInfoException("프로젝트 최대 디스크 한도를 초과했습니다.");
+        }
     }
 
     private int calculateWeightedResourceUsage(int memoryPercentage, int cpuPercentage, int diskPercentage) {

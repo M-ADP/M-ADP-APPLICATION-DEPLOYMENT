@@ -32,7 +32,6 @@ public class AppDeploymentController {
     public ResponseEntity<ApiResponseDto<Long>> createAppDeployment(
             @Valid @RequestBody CreateAppDeploymentRequestDto createAppDeploymentRequestDto
     ) {
-
         return ResponseEntity.ok(
                 ApiResponseDto.of(
                         "애플리케이션이 생성되었습니다.",
@@ -128,14 +127,6 @@ public class AppDeploymentController {
                         appDeploymentService.getAppDeploymentListByProjectId(projectId)
                 )
         );
-    }
-
-    @DeleteMapping("/projects/{project_id}/apps")
-    public ResponseEntity<Void> deleteAppDeploymentListByProjectId(
-            @PathVariable("project_id") Long projectId
-    ) {
-        appDeploymentService.deleteAppDeploymentListByProjectId(projectId);
-        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/summary")

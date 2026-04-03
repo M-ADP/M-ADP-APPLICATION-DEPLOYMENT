@@ -1,16 +1,18 @@
 package madp.appdeployment.global.aspect;
 
-import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 
-@Slf4j
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Aspect
 @Component
 public class LoggingAspect {
+    private static final Logger log = LoggerFactory.getLogger(LoggingAspect.class);
 
     @Pointcut("@annotation(madp.appdeployment.global.annotation.Trace) || @within(madp.appdeployment.global.annotation.Trace)")
     public void loggingTraceAnnotationPointcut() {}
