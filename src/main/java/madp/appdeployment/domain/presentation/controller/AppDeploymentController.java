@@ -130,6 +130,14 @@ public class AppDeploymentController {
         );
     }
 
+    @DeleteMapping("/projects/{project_id}/apps")
+    public ResponseEntity<Void> deleteAppDeploymentListByProjectId(
+            @PathVariable("project_id") Long projectId
+    ) {
+        appDeploymentService.deleteAppDeploymentListByProjectId(projectId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/summary")
     public ResponseEntity<ApiResponseDto<List<AppDeploymentSummaryResponseDto>>> getAppDeploymentSummary(
             @Valid @RequestBody GetAppDeploymentSummaryRequestDto getAppDeploymentSummaryRequestDto
