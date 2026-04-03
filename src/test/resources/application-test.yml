@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: madp-appdeployment-test
+  datasource:
+    url: jdbc:h2:mem:madp-appdeployment;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+  cloud:
+    openfeign:
+      client:
+        config:
+          user-client:
+            url: http://localhost
+          project-client:
+            url: http://localhost
+          resource-client:
+            url: http://localhost
+          jenkins-client:
+            url: http://localhost
+          github-client:
+            url: http://localhost
+
+github:
+  webhook:
+    private-key: test-private-key
+    app-id: test-app-id
+    webhook-secret: test-webhook-secret
+
+jenkins:
+  username: test
+  api-key: test
+
+web:
+  front-end-url: http://localhost:3000
+  back-end-url: http://localhost:8080

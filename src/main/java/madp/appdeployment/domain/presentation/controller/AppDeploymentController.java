@@ -72,6 +72,14 @@ public class AppDeploymentController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/projects/{project_id}/apps")
+    public ResponseEntity<Void> deleteAppDeploymentListByProjectId(
+            @PathVariable("project_id") Long projectId
+    ) {
+        appDeploymentService.deleteAppDeploymentListByProjectId(projectId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponseDto<List<AppDeploymentStatusResponseDto>>> getAppDeploymentsByProjectId(
             @RequestParam(value = "project_id") String projectId

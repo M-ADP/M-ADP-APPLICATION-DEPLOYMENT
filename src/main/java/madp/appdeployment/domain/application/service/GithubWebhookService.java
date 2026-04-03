@@ -1,6 +1,7 @@
 package madp.appdeployment.domain.application.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import java.util.Base64;
 import madp.appdeployment.domain.domain.entity.GithubAccountUserEntity;
 import madp.appdeployment.domain.domain.entity.GithubAllowedRepoEntity;
@@ -35,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GithubWebhookService {
@@ -53,20 +55,27 @@ public class GithubWebhookService {
         Long installationId = githubWebhookInstallationRequestDto.installation().id();
         Long accountId = githubWebhookInstallationRequestDto.installation().account().id();
 
+        log.info("[installGithubApp] 요청 - installationId={}, accountId={}", installationId, accountId);
 
         saveInstallation(githubWebhookInstallationRequestDto, installationId, accountId);
         saveAllowedRepositories(githubWebhookInstallationRequestDto.repositories(), installationId, accountId);
         saveMembers(githubWebhookInstallationRequestDto, installationId);
 
+        log.info("[installGithubApp] 완료 - installationId={}, repositoryCount={}",
+                installationId, githubWebhookInstallationRequestDto.repositories().size());
     }
 
     @Transactional
     public void uninstallGithubApp(Long installationId) {
+        log.info("[uninstallGithubApp] 요청 - installationId={}", installationId);
+
         // 자식 테이블부터 삭제 (Foreign Key 제약조건 때문)
         appDeploymentRepository.deleteAllByInstallationId(installationId);
         githubAccountUserRepository.deleteAllByInstallationId(installationId);
         githubAllowedRepoRepository.deleteAllByInstallationId(installationId);
         githubInstallationRepository.deleteAllByInstallationId(installationId);
+
+        log.info("[uninstallGithubApp] 완료 - installationId={}", installationId);
     }
 
     @Transactional
@@ -75,9 +84,13 @@ public class GithubWebhookService {
         List<GithubRepositoryRequestDto> githubRemoveRepositories = githubWebhookInstallationRequestDto.repositoriesRemoved();
         List<GithubAllowedRepoEntity> githubAllowedAddRepositories = new ArrayList<>();
 
+        log.info("[updateRepositories] 요청 - installationId={}, addCount={}, removeCount={}",
+                githubWebhookInstallationRequestDto.installation().id(),
+                githubAddRepositories.size(), githubRemoveRepositories.size());
+
         GithubInstallationEntity installation = githubInstallationRepository.findByInstallationId(githubWebhookInstallationRequestDto.installation().id())
                 .orElseThrow(() -> new InstallationNotFoundException("Installation을 찾을 수 없습니다: " + githubWebhookInstallationRequestDto.installation().id()));
-        
+
         for(GithubRepositoryRequestDto addGithubRepository : githubAddRepositories) {
             GithubAllowedRepoEntity gitHubAllowedRepoEntity = GithubAllowedRepoEntity.builder()
                     .installation(installation)
@@ -98,6 +111,7 @@ public class GithubWebhookService {
             githubAllowedRepoRepository.deleteAllByRepositoryIdIn(removeRepositoryIds);
         }
 
+        log.info("[updateRepositories] 완료 - installationId={}", githubWebhookInstallationRequestDto.installation().id());
     }
 
     /**
@@ -112,22 +126,33 @@ public class GithubWebhookService {
      * @return 사용자가 접근 가능한 GitHub Repository 목록
      */
     public List<GithubAllowedRepositoryResponseDto> getAllowedRepositories() {
+        log.info("[getAllowedRepositories] 요청");
+
         ApiResponseDto<UserProfileResponseDto> userProfileResponseDto = userClient.getUserProfile();
-        Long userGithubId = userProfileResponseDto.data().id();
-        
-        // 사용자가 속한 모든 GitHub 계정(개인/조직) ID 조회
-        List<Long> userAllGithubAccounts = githubAccountUserRepository.findAllGithubAccountIdByGithubUserId(userGithubId);
-        
-        if (userAllGithubAccounts.isEmpty()) {
+        if (userProfileResponseDto.data() == null) {
+            log.warn("[getAllowedRepositories] UserProfile data가 null - 빈 목록 반환");
             return new ArrayList<>();
         }
-        
+        Long userGithubId = Long.parseLong(userProfileResponseDto.data().githubId());
+        log.info("[getAllowedRepositories] 유저 GitHub ID 조회 완료 - userGithubId={}", userGithubId);
+
+        // 사용자가 속한 모든 GitHub 계정(개인/조직) ID 조회
+        List<Long> userAllGithubAccounts = githubAccountUserRepository.findAllGithubAccountIdByGithubUserId(userGithubId);
+
+        if (userAllGithubAccounts.isEmpty()) {
+            log.info("[getAllowedRepositories] 소속된 GitHub 계정 없음 - userGithubId={}", userGithubId);
+            return new ArrayList<>();
+        }
+
         // 해당 계정들의 허용된 Repository 목록을 Installation과 함께 조회 (fetch join 으로 성능 최적화)
         List<GithubAllowedRepoEntity> allowedRepositories = githubAllowedRepoRepository.findAllByAccountIdInWithInstallation(userAllGithubAccounts);
-        
-        return allowedRepositories.stream()
+
+        List<GithubAllowedRepositoryResponseDto> result = allowedRepositories.stream()
                 .map(this::convertToResponseDto)
                 .toList();
+
+        log.info("[getAllowedRepositories] 완료 - userGithubId={}, repositoryCount={}", userGithubId, result.size());
+        return result;
     }
     
     /**
@@ -198,31 +223,58 @@ public class GithubWebhookService {
 
     @Transactional
     public void addMember(GithubWebhookOrganizationRequestDto githubWebhookOrganizationRequestDto) {
-        if(GithubUserType.BOT.getUserType().equals(githubWebhookOrganizationRequestDto.githubType())) return;
-        
+        log.info("[addMember] 요청 - organizationId={}, githubId={}, type={}",
+                githubWebhookOrganizationRequestDto.organizationId(),
+                githubWebhookOrganizationRequestDto.githubId(),
+                githubWebhookOrganizationRequestDto.githubType());
+
+        if(GithubUserType.BOT.getUserType().equals(githubWebhookOrganizationRequestDto.githubType())) {
+            log.info("[addMember] BOT 계정 무시 - githubId={}", githubWebhookOrganizationRequestDto.githubId());
+            return;
+        }
+
         // Organization ID로 Installation 조회
         GithubInstallationEntity installation = githubInstallationRepository.findByAccountId(githubWebhookOrganizationRequestDto.organizationId())
                 .orElseThrow(() -> new InstallationNotFoundException("Organization의 Installation을 찾을 수 없습니다: " + githubWebhookOrganizationRequestDto.organizationId()));
-        
+
         GithubAccountUserEntity githubAccountUserEntity = GithubAccountUserEntity.builder()
                 .installation(installation)
                 .githubUserId(githubWebhookOrganizationRequestDto.githubId())
                 .build();
         githubAccountUserRepository.save(githubAccountUserEntity);
+        log.info("[addMember] 완료 - organizationId={}, githubId={}",
+                githubWebhookOrganizationRequestDto.organizationId(), githubWebhookOrganizationRequestDto.githubId());
     }
 
     @Transactional
     public void removeMember(GithubWebhookOrganizationRequestDto githubWebhookOrganizationRequestDto) {
-        if(GithubUserType.BOT.getUserType().equals(githubWebhookOrganizationRequestDto.githubType())) return;
+        log.info("[removeMember] 요청 - organizationId={}, githubId={}, type={}",
+                githubWebhookOrganizationRequestDto.organizationId(),
+                githubWebhookOrganizationRequestDto.githubId(),
+                githubWebhookOrganizationRequestDto.githubType());
+
+        if(GithubUserType.BOT.getUserType().equals(githubWebhookOrganizationRequestDto.githubType())) {
+            log.info("[removeMember] BOT 계정 무시 - githubId={}", githubWebhookOrganizationRequestDto.githubId());
+            return;
+        }
         githubAccountUserRepository.deleteByGithubAccountIdAndGithubUserId(githubWebhookOrganizationRequestDto.organizationId(), githubWebhookOrganizationRequestDto.githubId());
+        log.info("[removeMember] 완료 - organizationId={}, githubId={}",
+                githubWebhookOrganizationRequestDto.organizationId(), githubWebhookOrganizationRequestDto.githubId());
     }
 
     @Transactional(readOnly = true)
     public void handlePushEvent(GithubWebhookPushRequestDto pushPayload) {
+        log.info("[handlePushEvent] 요청 - repositoryId={}, branch={}",
+                pushPayload.repository().id(), pushPayload.getBranchName());
+
         // Repository ID로 AppDeploymentEntity 조회 (여러 deployment가 같은 repository 사용 가능)
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findByGithubRepository_RepositoryId(pushPayload.repository().id()).orElseThrow(AppDeploymentNotFoundException::new);
 
-        if(!pushPayload.isBranch(appDeploymentEntity.getGithubBranch())) return;
+        if(!pushPayload.isBranch(appDeploymentEntity.getGithubBranch())) {
+            log.info("[handlePushEvent] 배포 대상 브랜치 아님 - pushBranch={}, deployBranch={}",
+                    pushPayload.getBranchName(), appDeploymentEntity.getGithubBranch());
+            return;
+        }
 
         JenkinsDeploymentRequestDto jenkinsDeploymentRequestDto = JenkinsDeploymentRequestDto.builder()
                 .repositoryId(pushPayload.repository().id())
@@ -236,6 +288,10 @@ public class GithubWebhookService {
         String authenticationInfo = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
         String crumb = jenkinsClient.getCrumb(authenticationInfo).crumb();
 
+        log.info("[handlePushEvent] Jenkins 빌드 트리거 - projectId={}, appId={}, repositoryFullName={}, branch={}",
+                jenkinsDeploymentRequestDto.projectId(), jenkinsDeploymentRequestDto.appId(),
+                jenkinsDeploymentRequestDto.repositoryFullName(), jenkinsDeploymentRequestDto.branch());
+
         jenkinsClient.triggerJenkins(
                 jenkinsDeploymentRequestDto.projectId(),
                 jenkinsDeploymentRequestDto.appId(),
@@ -247,6 +303,6 @@ public class GithubWebhookService {
         );
 
         appDeploymentEntity.updateStatus(AppDeploymentStatus.BUILDING);
-
+        log.info("[handlePushEvent] 완료 - appDeploymentId={}, status=BUILDING", appDeploymentEntity.getId());
     }
 }

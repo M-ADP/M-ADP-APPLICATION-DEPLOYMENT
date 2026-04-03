@@ -10,6 +10,9 @@ import java.util.List;
 
 @Builder
 public record AppDeploymentRequestDto(
+        @JsonProperty("deployment_id")
+        Long deploymentId,
+
         @JsonProperty("name")
         @NotNull(message = "이름은 존재해야합니다.")
         @NotBlank(message = "이름은 존재해야합니다.")
