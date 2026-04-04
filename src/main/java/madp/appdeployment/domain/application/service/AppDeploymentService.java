@@ -6,6 +6,7 @@ import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.domain.entity.GithubAllowedRepoEntity;
 import madp.appdeployment.domain.domain.enums.AppDeploymentStatus;
 import madp.appdeployment.domain.domain.repository.AppDeploymentRepository;
+import madp.appdeployment.domain.domain.repository.AppDeploymentTagRepository;
 import madp.appdeployment.domain.domain.repository.GithubAllowedRepoRepository;
 import madp.appdeployment.domain.domain.repository.dto.ProjectResourceUsageSumDto;
 import madp.appdeployment.domain.domain.vo.ResourceInfo;
@@ -46,6 +47,7 @@ public class AppDeploymentService {
     private static final Logger log = LoggerFactory.getLogger(AppDeploymentService.class);
     private static final int MI_PER_GB = 1024;
     private final AppDeploymentRepository appDeploymentRepository;
+    private final AppDeploymentTagRepository appDeploymentTagRepository;
     private final GithubAllowedRepoRepository githubAllowedRepoRepository;
     private final ProjectClient projectClient;
     private final ResourceClient resourceClient;
@@ -104,6 +106,7 @@ public class AppDeploymentService {
 
         deleteResourceApp(appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
 
+        appDeploymentTagRepository.deleteAllByAppDeployment(appDeploymentEntity);
         appDeploymentRepository.delete(appDeploymentEntity);
         log.info("[deleteAppDeployment] 완료 - appDeploymentId={}", appDeploymentId);
     }
@@ -120,6 +123,7 @@ public class AppDeploymentService {
             deleteResourceApp(appDeployment.getProjectId(), appDeployment.getName());
         }
 
+        appDeploymentTagRepository.deleteAllByAppDeploymentIn(appDeployments);
         appDeploymentRepository.deleteAll(appDeployments);
         log.info("[deleteAppDeploymentListByProjectId] 완료 - projectId={}, deletedCount={}", projectIdValue, appDeployments.size());
     }
