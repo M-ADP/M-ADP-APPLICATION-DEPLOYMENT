@@ -358,14 +358,20 @@ public class AppDeploymentService {
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
+        log.info("[getDetailsProjectIdAndAppName] 요청1111111 - appDeployment={}", appDeploymentEntity.getName());
+
         AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto =
                 resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).data().getFirst();
+
+        log.info("[getDetailsProjectIdAndAppName] 요청22222222222 - resource(CPU)={}", appResourceDto.cpu());
 
         int resourceUsePercentage = calculateWeightedResourceUsage(
                 appResourceDto.memory().percentage(),
                 appResourceDto.cpu().percentage(),
                 appResourceDto.disk().percentage()
         );
+
+        log.info("[getDetailsProjectIdAndAppName] 요청333333333333333 - resourceUsePercentage={}",  resourceUsePercentage);
 
         AppDeploymentInfoResponseDto result = AppDeploymentInfoResponseDto.builder()
                 .appId(Long.parseLong(appResourceDto.appId()))
