@@ -327,11 +327,14 @@ public class AppDeploymentService {
             throw new ProjectAccessDeniedException();
         }
 
+        AppDeploymentEntity appDeploymentEntityForStatus = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+                .orElseThrow(AppDeploymentNotFoundException::new);
+
         AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto =
                 resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).data().getFirst();
 
         AppResourceStatusResponseDto result = AppResourceStatusResponseDto.builder()
-                    .appId(Long.parseLong(appResourceDto.appId()))
+                    .appId(appDeploymentEntityForStatus.getId())
                     .cpuUsagePercentage(appResourceDto.cpu().percentage())
                     .memoryUsed(appResourceDto.memory().used())
                     .memoryTotal(appResourceDto.memory().limit())
@@ -373,11 +376,15 @@ public class AppDeploymentService {
 
         log.info("[getDetailsProjectIdAndAppName] 요청333333333333333 - resourceUsePercentage={}",  resourceUsePercentage);
 
+        String githubRepositoryUrl = appDeploymentEntity.getGithubRepository() != null
+                ? appDeploymentEntity.getGithubRepository().getRepositoryFullName()
+                : null;
+
         AppDeploymentInfoResponseDto result = AppDeploymentInfoResponseDto.builder()
-                .appId(Long.parseLong(appResourceDto.appId()))
+                .appId(appDeploymentEntity.getId())
                 .port(appDeploymentEntity.getPort())
                 .resourceUsePercentage(resourceUsePercentage)
-                .githubRepositoryUrl(appDeploymentEntity.getGithubRepository().getRepositoryFullName())
+                .githubRepositoryUrl(githubRepositoryUrl)
                 .status(appDeploymentEntity.getStatus().name())
                 .build();
 
