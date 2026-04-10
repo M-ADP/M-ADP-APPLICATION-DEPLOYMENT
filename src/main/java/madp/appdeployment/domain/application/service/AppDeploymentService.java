@@ -311,8 +311,12 @@ public class AppDeploymentService {
             log.warn("[getLogs] 프로젝트 접근 권한 없음 - projectId={}", projectId);
             throw new ProjectAccessDeniedException();
         }
+        log.info("[getLogs] project 요청 성공");
 
         ApiResponseDto<PodLogsResponseDto.LogDataDto> podLogsResponseDto = resourceClient.getPodLogs(projectId, appName);
+
+        log.info("[getLogs] resource 요청 성공");
+
         String logs = podLogsResponseDto.data().podLogs().getFirst().logs();
         log.info("[getLogs] 완료 - projectId={}, appName={}, logLength={}", projectId, appName, logs.length());
         return logs;
