@@ -15,9 +15,7 @@ import madp.appdeployment.domain.domain.repository.GithubInstallationRepository;
 import madp.appdeployment.domain.domain.repository.GithubAccountUserRepository;
 import madp.appdeployment.domain.exception.InstallationNotFoundException;
 import madp.appdeployment.domain.exception.AppDeploymentNotFoundException;
-import madp.appdeployment.domain.infrastructure.client.JenkinsClient;
 import madp.appdeployment.domain.infrastructure.client.UserClient;
-import madp.appdeployment.domain.infrastructure.client.request.JenkinsDeploymentRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.UserProfileResponseDto;
 import madp.appdeployment.domain.infrastructure.github.token.GithubAppTokenManager;
 import madp.appdeployment.domain.infrastructure.client.GithubClient;
@@ -29,7 +27,6 @@ import madp.appdeployment.domain.presentation.dto.request.GithubWebhookPushReque
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.presentation.dto.response.GithubAllowedRepositoryResponseDto;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
-import madp.appdeployment.global.properties.JenkinsProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,8 +44,7 @@ public class GithubWebhookService {
     private final UserClient userClient;
     private final GithubAppTokenManager githubAppTokenManager;
     private final GithubClient githubClient;
-    private final JenkinsClient jenkinsClient;
-    private final JenkinsProperties jenkinsProperties;
+    private final JenkinsService jenkinsService;
 
     @Transactional
     public void installGithubApp(GithubWebhookInstallationRequestDto githubWebhookInstallationRequestDto) {
@@ -276,33 +272,6 @@ public class GithubWebhookService {
             return;
         }
 
-        JenkinsDeploymentRequestDto jenkinsDeploymentRequestDto = JenkinsDeploymentRequestDto.builder()
-                .repositoryId(pushPayload.repository().id())
-                .branch(pushPayload.getBranchName())
-                .projectId(appDeploymentEntity.getProjectId())
-                .appId(appDeploymentEntity.getId())
-                .repositoryFullName(pushPayload.repository().fullName())
-                .build();
-
-        String credentials = jenkinsProperties.getUsername() + ":" + jenkinsProperties.getApiKey();
-        String authenticationInfo = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
-        String crumb = jenkinsClient.getCrumb(authenticationInfo).crumb();
-
-        log.info("[handlePushEvent] Jenkins 빌드 트리거 - projectId={}, appId={}, repositoryFullName={}, branch={}",
-                jenkinsDeploymentRequestDto.projectId(), jenkinsDeploymentRequestDto.appId(),
-                jenkinsDeploymentRequestDto.repositoryFullName(), jenkinsDeploymentRequestDto.branch());
-
-        jenkinsClient.triggerJenkins(
-                jenkinsDeploymentRequestDto.projectId(),
-                jenkinsDeploymentRequestDto.appId(),
-                jenkinsDeploymentRequestDto.repositoryFullName(),
-                jenkinsDeploymentRequestDto.repositoryId(),
-                jenkinsDeploymentRequestDto.branch(),
-                authenticationInfo,
-                crumb
-        );
-
-        appDeploymentEntity.updateStatus(AppDeploymentStatus.BUILDING);
-        log.info("[handlePushEvent] 완료 - appDeploymentId={}, status=BUILDING", appDeploymentEntity.getId());
+        jenkinsService.triggerBuild(appDeploymentEntity);
     }
 }

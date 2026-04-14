@@ -30,6 +30,8 @@ import madp.appdeployment.domain.presentation.dto.response.AppDeploymentSummaryR
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
 import madp.appdeployment.global.infrastructure.feign.exception.FeignClientNotFoundException;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
+import madp.appdeployment.domain.application.event.GithubRepoLinkedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +51,7 @@ public class AppDeploymentService {
     private final ProjectClient projectClient;
     private final ResourceClient resourceClient;
     private final ProjectResourceLockManager projectResourceLockManager;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Long createAppDeployment(CreateAppDeploymentRequestDto createAppDeploymentRequestDto) {
@@ -231,6 +234,10 @@ public class AppDeploymentService {
 
         appDeploymentEntity.uploadGithubInfo(updateGithubInfoRequestDto.branch(), githubAllowedRepoEntity);
         log.info("[updateGithubInfo] 완료 - appDeploymentId={}, repositoryFullName={}", updateGithubInfoRequestDto.appDeploymentId(), repositoryFullName);
+
+        // Jenkins 빌드 트리거를 위해 이벤트 발행
+        eventPublisher.publishEvent(new GithubRepoLinkedEvent(appDeploymentEntity));
+        log.info("[updateGithubInfo] GithubRepoLinkedEvent 발행 완료 - appDeploymentId={}", appDeploymentEntity.getId());
     }
 
     @Transactional(readOnly = true)

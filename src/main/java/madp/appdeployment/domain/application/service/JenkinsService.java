@@ -14,6 +14,9 @@ import madp.appdeployment.domain.presentation.dto.request.JenkinsSuccessTriggerR
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import madp.appdeployment.domain.infrastructure.client.JenkinsClient;
+import madp.appdeployment.global.properties.JenkinsProperties;
+import java.util.Base64;
 import java.util.Collections;
 
 @Slf4j
@@ -24,6 +27,33 @@ public class JenkinsService {
     private final AppDeploymentRepository appDeploymentRepository;
     private final AppDeploymentTagRepository appDeploymentTagRepository;
     private final ResourceClient resourceClient;
+    private final JenkinsClient jenkinsClient;
+    private final JenkinsProperties jenkinsProperties;
+
+    @Transactional
+    public void triggerBuild(AppDeploymentEntity appDeploymentEntity) {
+        log.info("[triggerBuild] Jenkins 빌드 트리거 요청 - appId={}, repositoryId={}, branch={}",
+                appDeploymentEntity.getId(),
+                appDeploymentEntity.getGithubRepository().getRepositoryId(),
+                appDeploymentEntity.getGithubBranch());
+
+        String credentials = jenkinsProperties.getUsername() + ":" + jenkinsProperties.getApiKey();
+        String authenticationInfo = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
+        String crumb = jenkinsClient.getCrumb(authenticationInfo).crumb();
+
+        jenkinsClient.triggerJenkins(
+                appDeploymentEntity.getProjectId(),
+                appDeploymentEntity.getId(),
+                appDeploymentEntity.getGithubRepository().getRepositoryFullName(),
+                appDeploymentEntity.getGithubRepository().getRepositoryId(),
+                appDeploymentEntity.getGithubBranch(),
+                authenticationInfo,
+                crumb
+        );
+
+        appDeploymentEntity.updateStatus(AppDeploymentStatus.BUILDING);
+        log.info("[triggerBuild] 완료 - appDeploymentId={}, status=BUILDING", appDeploymentEntity.getId());
+    }
 
     @Transactional
     public void successTrigger(JenkinsSuccessTriggerRequestDto jenkinsSuccessTriggerRequestDto) {
