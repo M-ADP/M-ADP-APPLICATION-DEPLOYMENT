@@ -10,6 +10,9 @@ import madp.appdeployment.domain.domain.vo.ResourceInfo;
 import madp.appdeployment.domain.exception.InvalidAppDeploymentException;
 import madp.appdeployment.global.entity.BaseEntity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -53,6 +56,9 @@ public class AppDeploymentEntity extends BaseEntity {
 
     @Column(name = "version")
     private Integer currentVersion;
+
+    @OneToMany(mappedBy = "appDeployment", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<AppDeploymentTagEntity> tags = new ArrayList<>();
 
     @Builder
     public AppDeploymentEntity(String name, String projectId, ResourceInfo resourceInfo) {
