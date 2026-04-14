@@ -118,6 +118,11 @@ public class AppDeploymentService {
         log.info("[deleteAppDeploymentListByProjectId] 조회된 앱 수 - projectId={}, count={}", projectIdValue, appDeployments.size());
 
         for (AppDeploymentEntity appDeployment : appDeployments) {
+            if (appDeployment.getStatus() == AppDeploymentStatus.PENDING) {
+                log.info("[deleteAppDeploymentListByProjectId] PENDING 상태 앱 건너뛰기 - projectId={}, name={}",
+                        appDeployment.getProjectId(), appDeployment.getName());
+                continue;
+            }
             resourceClient.deleteAppDeployment(appDeployment.getProjectId(), appDeployment.getName());
             log.info("[deleteAppDeploymentListByProjectId] 리소스 삭제 요청 완료 - projectId={}, name={}",
                     appDeployment.getProjectId(), appDeployment.getName());
