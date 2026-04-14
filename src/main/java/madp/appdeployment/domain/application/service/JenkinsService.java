@@ -27,8 +27,9 @@ public class JenkinsService {
 
     @Transactional
     public void successTrigger(JenkinsSuccessTriggerRequestDto jenkinsSuccessTriggerRequestDto) {
-        log.info("[successTrigger] 요청 - repositoryId={}, tag={}",
-                jenkinsSuccessTriggerRequestDto.repositoryId(), jenkinsSuccessTriggerRequestDto.tag());
+        log.info("[successTrigger] 요청 - repositoryId={}, tag={}, port={}",
+                jenkinsSuccessTriggerRequestDto.repositoryId(), jenkinsSuccessTriggerRequestDto.tag(),
+                jenkinsSuccessTriggerRequestDto.port());
 
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findByGithubRepository_RepositoryId(jenkinsSuccessTriggerRequestDto.repositoryId()).orElseThrow(AppDeploymentNotFoundException::new);
 
@@ -47,6 +48,7 @@ public class JenkinsService {
         appDeploymentTagRepository.save(appDeploymentTagEntity);
 
         appDeploymentEntity.upgradeVersion();
+        appDeploymentEntity.updatePort(jenkinsSuccessTriggerRequestDto.port());
 
         String projectId = appDeploymentEntity.getProjectId();
         String imageName = projectId + "/" + jenkinsSuccessTriggerRequestDto.repositoryId();
@@ -59,7 +61,7 @@ public class JenkinsService {
                                 AppDeploymentRequestDto.ContainerDto.builder()
                                         .name(appDeploymentEntity.getName())
                                         .image(imageName + ":" + jenkinsSuccessTriggerRequestDto.tag())
-                                        .ports(Collections.singletonList(appDeploymentEntity.getPort()))
+                                        .ports(Collections.singletonList(jenkinsSuccessTriggerRequestDto.port()))
                                         .resources(
                                                 AppDeploymentRequestDto.ResourcesDto.builder()
                                                         .limits(

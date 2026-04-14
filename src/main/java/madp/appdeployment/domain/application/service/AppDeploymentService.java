@@ -51,10 +51,9 @@ public class AppDeploymentService {
 
     @Transactional
     public Long createAppDeployment(CreateAppDeploymentRequestDto createAppDeploymentRequestDto) {
-        log.info("[createAppDeployment] 요청 - projectId={}, name={}, port={}, cpu={}, memory={}, disk={}",
+        log.info("[createAppDeployment] 요청 - projectId={}, name={}, cpu={}, memory={}, disk={}",
                 createAppDeploymentRequestDto.projectId(),
                 createAppDeploymentRequestDto.name(),
-                createAppDeploymentRequestDto.port(),
                 createAppDeploymentRequestDto.cpu(),
                 createAppDeploymentRequestDto.memory(),
                 createAppDeploymentRequestDto.disk());
@@ -74,7 +73,6 @@ public class AppDeploymentService {
 
             AppDeploymentEntity appDeploymentEntity = AppDeploymentEntity.builder()
                     .name(createAppDeploymentRequestDto.name())
-                    .port(createAppDeploymentRequestDto.port())
                     .projectId(createAppDeploymentRequestDto.projectId())
                     .resourceInfo(resourceInfo)
                     .build();

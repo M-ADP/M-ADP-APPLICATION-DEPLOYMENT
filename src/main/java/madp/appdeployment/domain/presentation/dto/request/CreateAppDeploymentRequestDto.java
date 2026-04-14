@@ -37,9 +37,5 @@ public record CreateAppDeploymentRequestDto(
         @JsonProperty("project_id")
         @NotNull(message = "프로젝트 ID는 존재해야 합니다.")
         @NotBlank(message = "프로젝트 ID는 존재해야 합니다.")
-        String projectId,
-
-        @JsonProperty("port")
-        @NotNull(message = "포트는 존재해야 합니다.")
-        Integer port
+        String projectId
 ) {}

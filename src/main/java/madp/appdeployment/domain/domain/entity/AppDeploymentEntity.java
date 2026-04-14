@@ -41,7 +41,7 @@ public class AppDeploymentEntity extends BaseEntity {
     @Column(name = "github_branch")
     private String githubBranch;
 
-    @Column(name = "port", nullable = false)
+    @Column(name = "port")
     private Integer port;
 
     @Column(name = "status", nullable = false)
@@ -55,15 +55,15 @@ public class AppDeploymentEntity extends BaseEntity {
     private Integer currentVersion;
 
     @Builder
-    public AppDeploymentEntity(String name, String projectId, ResourceInfo resourceInfo, Integer port) {
-        validateFields(name, projectId, resourceInfo, port);
+    public AppDeploymentEntity(String name, String projectId, ResourceInfo resourceInfo) {
+        validateFields(name, projectId, resourceInfo);
 
         this.name = name;
         this.projectId = projectId;
         this.resourceInfo = resourceInfo;
         this.githubBranch = null;
         this.githubRepository = null;
-        this.port = port;
+        this.port = null;
         this.status = AppDeploymentStatus.PENDING;
         this.image = null;
         this.currentVersion = 0;
@@ -87,6 +87,10 @@ public class AppDeploymentEntity extends BaseEntity {
         this.githubBranch = branch != null ? branch : "main";
     }
 
+    public void updatePort(Integer port) {
+        this.port = port;
+    }
+
     public void updateStatus(AppDeploymentStatus status) {
         this.status = status;
     }
@@ -101,15 +105,15 @@ public class AppDeploymentEntity extends BaseEntity {
         }
     }
 
-    private void validateFields(String name, String projectId, ResourceInfo resourceInfo, Integer port) {
+    private void validateFields(String name, String projectId, ResourceInfo resourceInfo) {
         if (name == null) {
             throw new InvalidAppDeploymentException("앱 이름은 필수입니다.");
         }
-        
+
         if (name.trim().isEmpty()) {
             throw new InvalidAppDeploymentException("앱 이름은 공백일 수 없습니다.");
         }
-        
+
         if (projectId == null) {
             throw new InvalidAppDeploymentException("프로젝트 ID는 필수입니다.");
         }
@@ -117,21 +121,9 @@ public class AppDeploymentEntity extends BaseEntity {
         if(projectId.trim().isEmpty()) {
             throw new InvalidAppDeploymentException("프로젝트 ID는 공백일 수 없습니다.");
         }
-        
+
         if (resourceInfo == null) {
             throw new InvalidAppDeploymentException("리소스 정보는 필수입니다.");
-        }
-        
-        if (port == null) {
-            throw new InvalidAppDeploymentException("포트는 필수입니다.");
-        }
-        
-        if (port <= 0) {
-            throw new InvalidAppDeploymentException("포트는 0보다 커야 합니다.");
-        }
-        
-        if (port > 65535) {
-            throw new InvalidAppDeploymentException("포트는 65535 이하이어야 합니다.");
         }
     }
 }
