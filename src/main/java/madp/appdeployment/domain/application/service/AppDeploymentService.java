@@ -28,6 +28,7 @@ import madp.appdeployment.domain.presentation.dto.response.AppDeploymentListResp
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentSummaryResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
+import madp.appdeployment.global.infrastructure.feign.exception.FeignClientNotFoundException;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -103,6 +104,10 @@ public class AppDeploymentService {
         resourceClient.deleteAppDeployment(appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
         log.info("[deleteAppDeployment] 리소스 삭제 요청 완료 - projectId={}, name={}", appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
 
+        // GitHub Repository 연결 해제 (GithubAllowedRepoEntity는 시스템 엔티티이므로 삭제하지 않음)
+        appDeploymentEntity.disconnectGithubRepository();
+        log.info("[deleteAppDeployment] GitHub Repository 연결 해제 완료 - appDeploymentId={}", appDeploymentId);
+
         appDeploymentRepository.delete(appDeploymentEntity);
         log.info("[deleteAppDeployment] 완료 - appDeploymentId={}", appDeploymentId);
     }
@@ -125,6 +130,10 @@ public class AppDeploymentService {
             log.info("[deleteAppDeploymentListByProjectId] 리소스 삭제 요청 완료 - projectId={}, name={}",
                     appDeployment.getProjectId(), appDeployment.getName());
         }
+
+        // GitHub Repository 연결 일괄 해제 (GithubAllowedRepoEntity는 시스템 엔티티이므로 삭제하지 않음)
+        appDeploymentRepository.disconnectGithubRepositoriesByProjectId(projectIdValue);
+        log.info("[deleteAppDeploymentListByProjectId] GitHub Repository 연결 해제 완료 - projectId={}", projectIdValue);
 
         appDeploymentRepository.deleteAll(appDeployments);
         log.info("[deleteAppDeploymentListByProjectId] 완료 - projectId={}, deletedCount={}", projectIdValue, appDeployments.size());

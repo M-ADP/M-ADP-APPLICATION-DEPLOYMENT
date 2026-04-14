@@ -35,9 +35,10 @@ public class AppDeploymentEntity extends BaseEntity {
     /**
      * GitHub Repository 정보
      * OneToOne: 하나의 배포는 하나의 GitHub Repository에만 연결됨
-     * GitHubAllowedRepoEntity가 삭제되면 JPA CASCADE로 이 배포도 자동 삭제됨
+     * GithubAllowedRepoEntity는 GitHub App이 허가한 시스템 엔티티이므로,
+     * AppDeployment 삭제 시 함께 삭제되지 않고 연결만 해제됨
      */
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "github_repository_id", referencedColumnName = "repository_id")
     private GithubAllowedRepoEntity githubRepository;
 
@@ -88,9 +89,17 @@ public class AppDeploymentEntity extends BaseEntity {
 
     public void uploadGithubInfo(String branch, GithubAllowedRepoEntity githubAllowedRepoEntity) {
         validateGithubInfo(branch, githubAllowedRepoEntity);
-        
+
         this.githubRepository = githubAllowedRepoEntity;
         this.githubBranch = branch != null ? branch : "main";
+    }
+
+    public void disconnectGithubRepository() {
+        if (this.githubRepository == null) {
+            return;
+        }
+        this.githubRepository = null;
+        this.githubBranch = null;
     }
 
     public void updatePort(Integer port) {
