@@ -109,6 +109,10 @@ public class AppDeploymentEntity extends BaseEntity {
     public void updateStatus(AppDeploymentStatus status) {
         this.status = status;
     }
+
+    public boolean isPending() {
+        return this.status == AppDeploymentStatus.PENDING;
+    }
     
     private void validateGithubInfo(String branch, GithubAllowedRepoEntity githubAllowedRepoEntity) {
         if (githubAllowedRepoEntity == null) {

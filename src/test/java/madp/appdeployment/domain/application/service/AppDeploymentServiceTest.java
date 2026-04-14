@@ -2,6 +2,7 @@ package madp.appdeployment.domain.application.service;
 
 import madp.appdeployment.domain.application.support.ProjectResourceLockManager;
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
+import madp.appdeployment.domain.domain.enums.AppDeploymentStatus;
 import madp.appdeployment.domain.domain.repository.AppDeploymentRepository;
 import madp.appdeployment.domain.domain.repository.GithubAllowedRepoRepository;
 import madp.appdeployment.domain.domain.repository.dto.ProjectResourceUsageSumDto;
@@ -14,6 +15,8 @@ import madp.appdeployment.domain.infrastructure.client.response.ProjectOwnerResp
 import madp.appdeployment.domain.infrastructure.client.response.ProjectResourceLimitResponseDto;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
+import org.springframework.context.ApplicationEventPublisher;
+import madp.appdeployment.global.infrastructure.feign.exception.FeignClientNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -55,6 +59,9 @@ class AppDeploymentServiceTest {
     @Mock
     private ProjectResourceLockManager projectResourceLockManager;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private AppDeploymentService appDeploymentService;
 
     @BeforeEach
@@ -64,7 +71,8 @@ class AppDeploymentServiceTest {
                 githubAllowedRepoRepository,
                 projectClient,
                 resourceClient,
-                projectResourceLockManager
+                projectResourceLockManager,
+                eventPublisher
         );
 
         lenient().doAnswer(invocation -> {
@@ -86,15 +94,14 @@ class AppDeploymentServiceTest {
                 1.0,
                 0.5,
                 10,
-                "project-1",
-                8080
+                "project-1"
         );
         AppDeploymentEntity savedEntity = AppDeploymentEntity.builder()
                 .name("sample-app")
                 .projectId("project-1")
                 .resourceInfo(ResourceInfo.builder().cpu(1.0).memory(0.5).disk(10).build())
-                .port(8080)
                 .build();
+        savedEntity.updatePort(8080);
         setEntityId(savedEntity, 101L);
 
         when(projectClient.getProjectOwner("project-1"))
@@ -118,8 +125,7 @@ class AppDeploymentServiceTest {
                 1.5,
                 0.5,
                 10,
-                "project-1",
-                8080
+                "project-1"
         );
 
         when(projectClient.getProjectOwner("project-1"))
@@ -143,8 +149,8 @@ class AppDeploymentServiceTest {
                 .name("sample-app")
                 .projectId("project-1")
                 .resourceInfo(ResourceInfo.builder().cpu(1.0).memory(0.5).disk(10).build())
-                .port(8080)
                 .build();
+        appDeploymentEntity.updatePort(8080);
         setEntityId(appDeploymentEntity, 77L);
         ResourceInfo updatedResourceInfo = ResourceInfo.builder()
                 .cpu(1.5)
@@ -179,8 +185,8 @@ class AppDeploymentServiceTest {
                 .name("sample-app")
                 .projectId("project-1")
                 .resourceInfo(ResourceInfo.builder().cpu(1.0).memory(0.5).disk(10).build())
-                .port(8080)
                 .build();
+        appDeploymentEntity.updatePort(8080);
         setEntityId(appDeploymentEntity, 77L);
         ResourceInfo updatedResourceInfo = ResourceInfo.builder()
                 .cpu(1.5)
@@ -211,14 +217,16 @@ class AppDeploymentServiceTest {
                 .name("api-server")
                 .projectId("123")
                 .resourceInfo(ResourceInfo.builder().cpu(1.0).memory(0.5).disk(10).build())
-                .port(8080)
                 .build();
+        apiServer.updatePort(8080);
+        apiServer.updateStatus(AppDeploymentStatus.RUNNING);
         AppDeploymentEntity worker = AppDeploymentEntity.builder()
                 .name("worker")
                 .projectId("123")
                 .resourceInfo(ResourceInfo.builder().cpu(0.5).memory(0.25).disk(5).build())
-                .port(8081)
                 .build();
+        worker.updatePort(8081);
+        worker.updateStatus(AppDeploymentStatus.RUNNING);
         List<AppDeploymentEntity> appDeployments = List.of(apiServer, worker);
 
         when(appDeploymentRepository.findAllByProjectId("123")).thenReturn(appDeployments);
@@ -229,6 +237,54 @@ class AppDeploymentServiceTest {
         verify(resourceClient).deleteAppDeployment("123", "worker");
         verify(appDeploymentRepository).deleteAll(appDeployments);
         verifyNoMoreInteractions(projectClient, githubAllowedRepoRepository, projectResourceLockManager);
+    }
+
+    @Test
+    void deleteAppDeploymentListByProjectIdDeletesAllProjectAppsIncludingPendingOnes() {
+        AppDeploymentEntity runningApp = AppDeploymentEntity.builder()
+                .name("running-app")
+                .projectId("123")
+                .resourceInfo(ResourceInfo.builder().cpu(1.0).memory(0.5).disk(10).build())
+                .build();
+        runningApp.updateStatus(AppDeploymentStatus.RUNNING);
+        AppDeploymentEntity pendingApp = AppDeploymentEntity.builder()
+                .name("pending-app")
+                .projectId("123")
+                .resourceInfo(ResourceInfo.builder().cpu(0.5).memory(0.25).disk(5).build())
+                .build();
+        // pendingApp status is PENDING by default
+        
+        List<AppDeploymentEntity> appDeployments = List.of(runningApp, pendingApp);
+
+        when(appDeploymentRepository.findAllByProjectId("123")).thenReturn(appDeployments);
+
+        appDeploymentService.deleteAppDeploymentListByProjectId(123L);
+
+        // running-app 은 리소스 삭제 요청
+        verify(resourceClient).deleteAppDeployment("123", "running-app");
+        // pending-app 은 리소스 삭제 요청 건너뜀
+        verify(resourceClient, never()).deleteAppDeployment("123", "pending-app");
+        // 하지만 DB 에서는 둘 다 삭제되어야 함
+        verify(appDeploymentRepository).deleteAll(appDeployments);
+    }
+
+    @Test
+    void deleteAppDeploymentListByProjectIdProceedsEvenIfResourceNotFound() {
+        AppDeploymentEntity app = AppDeploymentEntity.builder()
+                .name("app")
+                .projectId("123")
+                .resourceInfo(ResourceInfo.builder().cpu(1.0).memory(0.5).disk(10).build())
+                .build();
+        app.updateStatus(AppDeploymentStatus.RUNNING);
+        List<AppDeploymentEntity> appDeployments = List.of(app);
+
+        when(appDeploymentRepository.findAllByProjectId("123")).thenReturn(appDeployments);
+        doThrow(new FeignClientNotFoundException()).when(resourceClient).deleteAppDeployment("123", "app");
+
+        appDeploymentService.deleteAppDeploymentListByProjectId(123L);
+
+        verify(resourceClient).deleteAppDeployment("123", "app");
+        verify(appDeploymentRepository).deleteAll(appDeployments);
     }
 
     private void setEntityId(AppDeploymentEntity appDeploymentEntity, Long id) {

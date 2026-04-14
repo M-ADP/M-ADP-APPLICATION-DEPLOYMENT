@@ -104,8 +104,7 @@ public class AppDeploymentService {
         }
 
         // AppDeployment 삭제 시, 관련된 리소스(jenkins) 해제
-        resourceClient.deleteAppDeployment(appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
-        log.info("[deleteAppDeployment] 리소스 삭제 요청 완료 - projectId={}, name={}", appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
+        deleteResourceSafely(appDeploymentEntity);
 
         // GitHub Repository 연결 해제 (GithubAllowedRepoEntity는 시스템 엔티티이므로 삭제하지 않음)
         appDeploymentEntity.disconnectGithubRepository();
@@ -124,14 +123,7 @@ public class AppDeploymentService {
         log.info("[deleteAppDeploymentListByProjectId] 조회된 앱 수 - projectId={}, count={}", projectIdValue, appDeployments.size());
 
         for (AppDeploymentEntity appDeployment : appDeployments) {
-            if (appDeployment.getStatus() == AppDeploymentStatus.PENDING) {
-                log.info("[deleteAppDeploymentListByProjectId] PENDING 상태 앱 건너뛰기 - projectId={}, name={}",
-                        appDeployment.getProjectId(), appDeployment.getName());
-                continue;
-            }
-            resourceClient.deleteAppDeployment(appDeployment.getProjectId(), appDeployment.getName());
-            log.info("[deleteAppDeploymentListByProjectId] 리소스 삭제 요청 완료 - projectId={}, name={}",
-                    appDeployment.getProjectId(), appDeployment.getName());
+            deleteResourceSafely(appDeployment);
         }
 
         // GitHub Repository 연결 일괄 해제 (GithubAllowedRepoEntity는 시스템 엔티티이므로 삭제하지 않음)
@@ -140,6 +132,26 @@ public class AppDeploymentService {
 
         appDeploymentRepository.deleteAll(appDeployments);
         log.info("[deleteAppDeploymentListByProjectId] 완료 - projectId={}, deletedCount={}", projectIdValue, appDeployments.size());
+    }
+
+    private void deleteResourceSafely(AppDeploymentEntity appDeployment) {
+        if (appDeployment.isPending()) {
+            log.info("[deleteResourceSafely] PENDING 상태 앱 건너뛰기 - projectId={}, name={}",
+                    appDeployment.getProjectId(), appDeployment.getName());
+            return;
+        }
+
+        try {
+            resourceClient.deleteAppDeployment(appDeployment.getProjectId(), appDeployment.getName());
+            log.info("[deleteResourceSafely] 리소스 삭제 요청 완료 - projectId={}, name={}",
+                    appDeployment.getProjectId(), appDeployment.getName());
+        } catch (FeignClientNotFoundException e) {
+            log.warn("[deleteResourceSafely] 리소스를 찾을 수 없음 (이미 삭제되었을 수 있음) - projectId={}, name={}",
+                    appDeployment.getProjectId(), appDeployment.getName());
+        } catch (Exception e) {
+            log.error("[deleteResourceSafely] 리소스 삭제 중 오류 발생 - projectId={}, name={}",
+                    appDeployment.getProjectId(), appDeployment.getName(), e);
+        }
     }
 
     @Transactional
