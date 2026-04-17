@@ -29,8 +29,11 @@ public interface JenkinsClient {
     @GetMapping("/crumbIssuer/api/json")
     JenkinsCrumbResponseDto getCrumb(@RequestHeader("Authorization") String authorization);
 
-    @GetMapping("/job/app-deployment-pipeline/api/json?tree=builds[number,result,timestamp,duration,actions[parameters[name,value]]]")
-    JenkinsBuildsResponse getBuilds(@RequestHeader("Authorization") String authorization);
+    @GetMapping("/job/app-deployment-pipeline/api/json")
+    JenkinsBuildsResponse getBuilds(
+            @RequestParam("tree") String tree,
+            @RequestHeader("Authorization") String authorization
+    );
 
     @GetMapping("/job/app-deployment-pipeline/{buildNumber}/consoleText")
     String getConsoleLog(

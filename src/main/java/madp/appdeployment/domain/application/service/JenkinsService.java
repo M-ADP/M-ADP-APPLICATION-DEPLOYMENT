@@ -28,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JenkinsService {
     private static final int MI_PER_GB = 1024;
+    private static final String BUILDS_TREE = "builds[number,result,timestamp,duration,actions[parameters[name,value]]]";
     private final AppDeploymentRepository appDeploymentRepository;
     private final AppDeploymentTagRepository appDeploymentTagRepository;
     private final ResourceClient resourceClient;
@@ -41,7 +42,7 @@ public class JenkinsService {
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
         String authenticationInfo = getAuthenticationInfo();
-        JenkinsBuildsResponse response = jenkinsClient.getBuilds(authenticationInfo);
+        JenkinsBuildsResponse response = jenkinsClient.getBuilds(BUILDS_TREE, authenticationInfo);
 
         String targetAppId = projectId + "-" + appName;
 

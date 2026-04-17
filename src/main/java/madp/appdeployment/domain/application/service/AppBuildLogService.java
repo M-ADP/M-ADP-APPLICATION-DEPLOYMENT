@@ -23,6 +23,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AppBuildLogService {
 
+    private static final String BUILDS_TREE = "builds[number,result,timestamp,duration,actions[parameters[name,value]]]";
+
     private final AppDeploymentRepository appDeploymentRepository;
     private final JenkinsClient jenkinsClient;
     private final JenkinsProperties jenkinsProperties;
@@ -75,7 +77,7 @@ public class AppBuildLogService {
     }
 
     private List<AppBuildLogListResponseDto.AppBuildResponse> fetchFilteredBuilds(String targetAppId) {
-        JenkinsBuildsResponse response = jenkinsClient.getBuilds(authorization());
+        JenkinsBuildsResponse response = jenkinsClient.getBuilds(BUILDS_TREE, authorization());
         return response.builds().stream()
                 .filter(build -> isBuildForApp(build, targetAppId))
                 .map(build -> new AppBuildLogListResponseDto.AppBuildResponse(

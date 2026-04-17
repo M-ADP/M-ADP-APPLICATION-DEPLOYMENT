@@ -20,7 +20,7 @@ public class JenkinsClientFallback implements JenkinsClient {
     }
 
     @Override
-    public JenkinsBuildsResponse getBuilds(String authorization) {
+    public JenkinsBuildsResponse getBuilds(String tree, String authorization) {
         throw new JenkinsUnavailableException();
     }
 
