@@ -31,14 +31,14 @@ public class AppBuildLogService {
 
     @Transactional(readOnly = true)
     public AppBuildLogListResponseDto getBuildLogs(String projectId, String appName) {
-        appDeploymentRepository.findByProjectIdAndName(projectId, appName)
-                .orElseThrow(AppDeploymentNotFoundException::new);
+        Long appId = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+                .orElseThrow(AppDeploymentNotFoundException::new)
+                .getId();
 
-        String targetAppId = projectId + "-" + appName;
-        List<AppBuildLogListResponseDto.AppBuildResponse> builds = fetchFilteredBuilds(targetAppId);
+        List<AppBuildLogListResponseDto.AppBuildResponse> builds = fetchFilteredBuilds(appId.toString());
 
-        log.info("[getBuildLogs] projectId={}, appName={}, count={}", projectId, appName, builds.size());
-        return new AppBuildLogListResponseDto(targetAppId, builds);
+        log.info("[getBuildLogs] projectId={}, appName={}, appId={}, count={}", projectId, appName, appId, builds.size());
+        return new AppBuildLogListResponseDto(appId.toString(), builds);
     }
 
     @Transactional(readOnly = true)
@@ -53,21 +53,21 @@ public class AppBuildLogService {
 
     @Transactional(readOnly = true)
     public AppLatestBuildLogResponseDto getLatestBuildLog(String projectId, String appName) {
-        appDeploymentRepository.findByProjectIdAndName(projectId, appName)
-                .orElseThrow(AppDeploymentNotFoundException::new);
+        Long appId = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+                .orElseThrow(AppDeploymentNotFoundException::new)
+                .getId();
 
-        String targetAppId = projectId + "-" + appName;
-        List<AppBuildLogListResponseDto.AppBuildResponse> builds = fetchFilteredBuilds(targetAppId);
+        List<AppBuildLogListResponseDto.AppBuildResponse> builds = fetchFilteredBuilds(appId.toString());
 
         AppBuildLogListResponseDto.AppBuildResponse latest = builds.stream()
                 .max(Comparator.comparingInt(AppBuildLogListResponseDto.AppBuildResponse::number))
                 .orElseThrow(AppBuildNotFoundException::new);
 
         String logs = jenkinsClient.getConsoleLog(latest.number(), authorization());
-        log.info("[getLatestBuildLog] projectId={}, appName={}, buildNumber={}", projectId, appName, latest.number());
+        log.info("[getLatestBuildLog] projectId={}, appName={}, appId={}, buildNumber={}", projectId, appName, appId, latest.number());
 
         return new AppLatestBuildLogResponseDto(
-                targetAppId,
+                appId.toString(),
                 latest.number(),
                 latest.result(),
                 latest.timestamp(),

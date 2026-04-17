@@ -37,17 +37,15 @@ public class JenkinsService {
 
     @Transactional(readOnly = true)
     public AppBuildLogListResponseDto getBuildLogs(String projectId, String appName) {
-        // 앱 존재 확인
-        appDeploymentRepository.findByProjectIdAndName(projectId, appName)
-                .orElseThrow(AppDeploymentNotFoundException::new);
+        Long appId = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+                .orElseThrow(AppDeploymentNotFoundException::new)
+                .getId();
 
         String authenticationInfo = getAuthenticationInfo();
         JenkinsBuildsResponse response = jenkinsClient.getBuilds(BUILDS_TREE, authenticationInfo);
 
-        String targetAppId = projectId + "-" + appName;
-
         List<AppBuildLogListResponseDto.AppBuildResponse> filteredBuilds = response.builds().stream()
-                .filter(build -> isBuildForApp(build, targetAppId))
+                .filter(build -> isBuildForApp(build, appId.toString()))
                 .map(build -> new AppBuildLogListResponseDto.AppBuildResponse(
                         build.number(),
                         build.result(),
@@ -56,7 +54,7 @@ public class JenkinsService {
                 ))
                 .toList();
 
-        return new AppBuildLogListResponseDto(targetAppId, filteredBuilds);
+        return new AppBuildLogListResponseDto(appId.toString(), filteredBuilds);
     }
 
     @Transactional(readOnly = true)
