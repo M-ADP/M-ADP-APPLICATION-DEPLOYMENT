@@ -4,16 +4,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 
 @Builder
-public record ApiResponseDto<T>(
+public record LegacyApiResponseDto<T>(
+    @JsonProperty("success")
+    boolean success,
+
     @JsonProperty("message")
     String message,
-    
+
     @JsonProperty("data")
     T data
 ) {
-
-    public static <T> ApiResponseDto<T> of(String message, T data) {
-        return ApiResponseDto.<T>builder()
+    public static <T> LegacyApiResponseDto<T> of(String message, T data) {
+        return LegacyApiResponseDto.<T>builder()
+                .success(true)
                 .message(message)
                 .data(data)
                 .build();
