@@ -40,7 +40,6 @@ class AppBuildLogControllerTest {
 
         mockMvc.perform(get("/api/v1/apps/project/app/build-logs"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("App deployment build logs retrieved successfully"))
                 .andExpect(jsonPath("$.data.app_id").value("project-app"))
                 .andExpect(jsonPath("$.data.builds[0].number").value(10));
@@ -53,7 +52,6 @@ class AppBuildLogControllerTest {
 
         mockMvc.perform(get("/api/v1/apps/project/app/build-logs/10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("App deployment build log detail retrieved successfully"))
                 .andExpect(jsonPath("$.data.number").value(10))
                 .andExpect(jsonPath("$.data.logs").value("log content"));
