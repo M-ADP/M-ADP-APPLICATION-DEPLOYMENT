@@ -23,14 +23,11 @@ import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseD
 import madp.appdeployment.domain.infrastructure.client.response.ProjectResourceLimitResponseDto;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
-import madp.appdeployment.domain.presentation.dto.response.AppBuildLogDetailResponseDto;
-import madp.appdeployment.domain.presentation.dto.response.AppBuildLogListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentSummaryResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
-import madp.appdeployment.global.exception.service.ExternalServiceUnavailableException;
 import madp.appdeployment.global.infrastructure.feign.exception.FeignClientNotFoundException;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import madp.appdeployment.domain.application.event.GithubRepoLinkedEvent;

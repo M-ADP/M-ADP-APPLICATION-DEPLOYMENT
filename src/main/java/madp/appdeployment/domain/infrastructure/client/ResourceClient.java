@@ -1,7 +1,7 @@
 package madp.appdeployment.domain.infrastructure.client;
 
 import jakarta.validation.Valid;
-import madp.appdeployment.domain.infrastructure.client.fallback.ResourceClientFallback;
+import madp.appdeployment.domain.infrastructure.client.fallback.ProjectClientFallback;
 import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
 import madp.appdeployment.domain.infrastructure.client.request.AppDeploymentRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
@@ -19,7 +19,7 @@ import java.util.List;
 
 @FeignClient(
         name = "resource-client",
-        fallback = ResourceClientFallback.class,
+        fallback = ProjectClientFallback.class,
         configuration = InternalServiceCommunicationConfiguration.class
 )
 public interface ResourceClient {
@@ -38,9 +38,9 @@ public interface ResourceClient {
     @PatchMapping("/apps")
     ApiResponseDto<AppRevisionResponseDto> reviseApp(@RequestBody @Valid AppRevisionRequestDto appRevisionRequestDto);
 
-    @DeleteMapping("/apps/{project-id}/{name}")
+    @DeleteMapping("/apps/{projectId}/{name}")
     ApiResponseDto<DeleteAppDeploymentResponseDto> deleteAppDeployment(
-            @PathVariable("project-id") String projectId,
+            @PathVariable String projectId,
             @PathVariable String name
     );
 }
