@@ -5,6 +5,9 @@ import lombok.Builder;
 
 @Builder
 public record ApiResponseDto<T>(
+    @JsonProperty("success")
+    boolean success,
+
     @JsonProperty("message")
     String message,
     
@@ -14,6 +17,7 @@ public record ApiResponseDto<T>(
 
     public static <T> ApiResponseDto<T> of(String message, T data) {
         return ApiResponseDto.<T>builder()
+                .success(true)
                 .message(message)
                 .data(data)
                 .build();

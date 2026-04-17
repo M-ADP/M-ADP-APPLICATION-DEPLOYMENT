@@ -15,9 +15,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import madp.appdeployment.domain.infrastructure.client.JenkinsClient;
+import madp.appdeployment.domain.infrastructure.client.response.JenkinsBuildsResponse;
+import madp.appdeployment.domain.presentation.dto.response.AppBuildLogDetailResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppBuildLogListResponseDto;
 import madp.appdeployment.global.properties.JenkinsProperties;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -29,6 +33,56 @@ public class JenkinsService {
     private final ResourceClient resourceClient;
     private final JenkinsClient jenkinsClient;
     private final JenkinsProperties jenkinsProperties;
+
+    @Transactional(readOnly = true)
+    public AppBuildLogListResponseDto getBuildLogs(String projectId, String appName) {
+        // 앱 존재 확인
+        appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+                .orElseThrow(AppDeploymentNotFoundException::new);
+
+        String authenticationInfo = getAuthenticationInfo();
+        JenkinsBuildsResponse response = jenkinsClient.getBuilds(authenticationInfo);
+
+        String targetAppId = projectId + "-" + appName;
+
+        List<AppBuildLogListResponseDto.AppBuildResponse> filteredBuilds = response.builds().stream()
+                .filter(build -> isBuildForApp(build, targetAppId))
+                .map(build -> new AppBuildLogListResponseDto.AppBuildResponse(
+                        build.number(),
+                        build.result(),
+                        build.timestamp(),
+                        build.duration()
+                ))
+                .toList();
+
+        return new AppBuildLogListResponseDto(targetAppId, filteredBuilds);
+    }
+
+    @Transactional(readOnly = true)
+    public AppBuildLogDetailResponseDto getBuildLogDetail(String projectId, String appName, Integer buildNumber) {
+        // 앱 존재 확인
+        appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+                .orElseThrow(AppDeploymentNotFoundException::new);
+
+        String authenticationInfo = getAuthenticationInfo();
+        String logs = jenkinsClient.getConsoleLog(buildNumber, authenticationInfo);
+
+        return new AppBuildLogDetailResponseDto(buildNumber, logs);
+    }
+
+    private String getAuthenticationInfo() {
+        String credentials = jenkinsProperties.getUsername() + ":" + jenkinsProperties.getApiKey();
+        return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
+    }
+
+    private boolean isBuildForApp(JenkinsBuildsResponse.JenkinsBuildResponse build, String targetAppId) {
+        if (build.actions() == null) return false;
+        return build.actions().stream()
+                .filter(action -> action.parameters() != null)
+                .anyMatch(action -> action.parameters().stream()
+                        .anyMatch(p -> "app_id".equals(p.name()) && targetAppId.equals(String.valueOf(p.value())))
+                );
+    }
 
     @Transactional
     public void triggerBuild(AppDeploymentEntity appDeploymentEntity) {
