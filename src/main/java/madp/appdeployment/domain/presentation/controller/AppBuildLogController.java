@@ -1,9 +1,10 @@
 package madp.appdeployment.domain.presentation.controller;
 
 import lombok.RequiredArgsConstructor;
-import madp.appdeployment.domain.application.service.JenkinsService;
+import madp.appdeployment.domain.application.service.AppBuildLogService;
 import madp.appdeployment.domain.presentation.dto.response.AppBuildLogDetailResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppBuildLogListResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppLatestBuildLogResponseDto;
 import madp.appdeployment.global.presentation.dto.response.LegacyApiResponseDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,10 +13,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/apps")
+@RequestMapping("/apps")
 @RequiredArgsConstructor
 public class AppBuildLogController {
-    private final JenkinsService jenkinsService;
+
+    private final AppBuildLogService appBuildLogService;
 
     @GetMapping("/{project_id}/{name}/build-logs")
     public ResponseEntity<LegacyApiResponseDto<AppBuildLogListResponseDto>> getBuildLogs(
@@ -25,7 +27,20 @@ public class AppBuildLogController {
         return ResponseEntity.ok(
                 LegacyApiResponseDto.of(
                         "App deployment build logs retrieved successfully",
-                        jenkinsService.getBuildLogs(projectId, name)
+                        appBuildLogService.getBuildLogs(projectId, name)
+                )
+        );
+    }
+
+    @GetMapping("/{project_id}/{name}/build-logs/latest")
+    public ResponseEntity<LegacyApiResponseDto<AppLatestBuildLogResponseDto>> getLatestBuildLog(
+            @PathVariable("project_id") String projectId,
+            @PathVariable("name") String name
+    ) {
+        return ResponseEntity.ok(
+                LegacyApiResponseDto.of(
+                        "App deployment latest build log retrieved successfully",
+                        appBuildLogService.getLatestBuildLog(projectId, name)
                 )
         );
     }
@@ -39,7 +54,7 @@ public class AppBuildLogController {
         return ResponseEntity.ok(
                 LegacyApiResponseDto.of(
                         "App deployment build log detail retrieved successfully",
-                        jenkinsService.getBuildLogDetail(projectId, name, buildNumber)
+                        appBuildLogService.getBuildLogDetail(projectId, name, buildNumber)
                 )
         );
     }

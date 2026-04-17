@@ -1,8 +1,9 @@
 package madp.appdeployment.domain.presentation.controller;
 
-import madp.appdeployment.domain.application.service.JenkinsService;
+import madp.appdeployment.domain.application.service.AppBuildLogService;
 import madp.appdeployment.domain.presentation.dto.response.AppBuildLogDetailResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppBuildLogListResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppLatestBuildLogResponseDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -21,12 +22,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AppBuildLogControllerTest {
 
     private MockMvc mockMvc;
-    private JenkinsService jenkinsService;
+    private AppBuildLogService appBuildLogService;
 
     @BeforeEach
     void setUp() {
-        jenkinsService = mock(JenkinsService.class);
-        AppBuildLogController controller = new AppBuildLogController(jenkinsService);
+        appBuildLogService = mock(AppBuildLogService.class);
+        AppBuildLogController controller = new AppBuildLogController(appBuildLogService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -36,9 +37,9 @@ class AppBuildLogControllerTest {
                 "project-app",
                 List.of(new AppBuildLogListResponseDto.AppBuildResponse(10, "SUCCESS", 1618640000000L, 45000L))
         );
-        when(jenkinsService.getBuildLogs(anyString(), anyString())).thenReturn(responseDto);
+        when(appBuildLogService.getBuildLogs(anyString(), anyString())).thenReturn(responseDto);
 
-        mockMvc.perform(get("/api/v1/apps/project/app/build-logs"))
+        mockMvc.perform(get("/apps/project/app/build-logs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("App deployment build logs retrieved successfully"))
@@ -47,11 +48,27 @@ class AppBuildLogControllerTest {
     }
 
     @Test
+    void getLatestBuildLogReturnsSuccessfulResponse() throws Exception {
+        AppLatestBuildLogResponseDto responseDto = new AppLatestBuildLogResponseDto(
+                "project-app", 10, "SUCCESS", 1618640000000L, 45000L, "log content"
+        );
+        when(appBuildLogService.getLatestBuildLog(anyString(), anyString())).thenReturn(responseDto);
+
+        mockMvc.perform(get("/apps/project/app/build-logs/latest"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("App deployment latest build log retrieved successfully"))
+                .andExpect(jsonPath("$.data.appId").value("project-app"))
+                .andExpect(jsonPath("$.data.number").value(10))
+                .andExpect(jsonPath("$.data.logs").value("log content"));
+    }
+
+    @Test
     void getBuildLogDetailReturnsSuccessfulResponse() throws Exception {
         AppBuildLogDetailResponseDto responseDto = new AppBuildLogDetailResponseDto(10, "log content");
-        when(jenkinsService.getBuildLogDetail(anyString(), anyString(), anyInt())).thenReturn(responseDto);
+        when(appBuildLogService.getBuildLogDetail(anyString(), anyString(), anyInt())).thenReturn(responseDto);
 
-        mockMvc.perform(get("/api/v1/apps/project/app/build-logs/10"))
+        mockMvc.perform(get("/apps/project/app/build-logs/10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("App deployment build log detail retrieved successfully"))
