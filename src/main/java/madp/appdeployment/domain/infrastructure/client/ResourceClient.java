@@ -5,7 +5,6 @@ import madp.appdeployment.domain.infrastructure.client.fallback.ResourceClientFa
 import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
 import madp.appdeployment.domain.infrastructure.client.request.AppDeploymentRequestDto;
 import madp.appdeployment.domain.infrastructure.client.request.CreateSecretRequestDto;
-import madp.appdeployment.domain.infrastructure.client.request.DeleteSecretRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppRevisionResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.DeleteAppDeploymentResponseDto;
@@ -54,10 +53,4 @@ public interface ResourceClient {
             @RequestBody CreateSecretRequestDto request
     );
 
-    @DeleteMapping("/apps/{project-id}/{name}/secrets")
-    void deleteSecret(
-            @PathVariable("project-id") String projectId,
-            @PathVariable("name") String appName,
-            @RequestBody DeleteSecretRequestDto request
-    );
 }

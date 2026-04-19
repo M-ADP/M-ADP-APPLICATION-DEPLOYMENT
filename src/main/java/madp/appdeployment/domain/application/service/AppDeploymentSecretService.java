@@ -10,7 +10,6 @@ import madp.appdeployment.domain.exception.AppDeploymentNotFoundException;
 import madp.appdeployment.domain.exception.SecretNotFoundException;
 import madp.appdeployment.domain.infrastructure.client.ResourceClient;
 import madp.appdeployment.domain.infrastructure.client.request.CreateSecretRequestDto;
-import madp.appdeployment.domain.infrastructure.client.request.DeleteSecretRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.SecretCreationResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.CreateSecretResponseDto;
 import org.springframework.stereotype.Service;
@@ -41,11 +40,12 @@ public class AppDeploymentSecretService {
         log.info("[createSecret] Resource 서비스 호출 완료 - path={}", resourceResponse.path());
 
         List<String> existingNames = appDeploymentSecretRepository.findNamesByAppDeploymentId(appDeployment.getId());
-        List<AppDeploymentSecretEntity> secrets = data.keySet().stream()
-                .filter(key -> !existingNames.contains(key))
-                .map(key -> AppDeploymentSecretEntity.builder()
+        List<AppDeploymentSecretEntity> secrets = data.entrySet().stream()
+                .filter(entry -> !existingNames.contains(entry.getKey()))
+                .map(entry -> AppDeploymentSecretEntity.builder()
                         .appDeployment(appDeployment)
-                        .name(key)
+                        .name(entry.getKey())
+                        .value(entry.getValue())
                         .build())
                 .toList();
         appDeploymentSecretRepository.saveAll(secrets);
@@ -76,11 +76,16 @@ public class AppDeploymentSecretService {
             throw new SecretNotFoundException();
         }
 
-        resourceClient.deleteSecret(projectId, appName, new DeleteSecretRequestDto(secretNames));
-        log.info("[deleteSecret] Resource 서비스 호출 완료 - projectId={}, appName={}", projectId, appName);
-
         appDeploymentSecretRepository.deleteAll(secrets);
-        log.info("[deleteSecret] 완료 - appDeploymentId={}, deletedCount={}", appDeployment.getId(), secrets.size());
+        log.info("[deleteSecret] DB 삭제 완료 - appDeploymentId={}, deletedCount={}", appDeployment.getId(), secrets.size());
+
+        List<AppDeploymentSecretEntity> remaining = appDeploymentSecretRepository.findAllByAppDeploymentId(appDeployment.getId());
+        Map<String, String> remainingData = remaining.stream()
+                .collect(java.util.stream.Collectors.toMap(AppDeploymentSecretEntity::getName, AppDeploymentSecretEntity::getValue));
+
+        log.info("[deleteSecret] 리소스 서버 createSecret 요청 - remainingCount={}", remainingData.size());
+        resourceClient.createSecret(projectId, appName, new CreateSecretRequestDto(remainingData));
+        log.info("[deleteSecret] 완료 - projectId={}, appName={}", projectId, appName);
     }
 
     @Transactional(readOnly = true)

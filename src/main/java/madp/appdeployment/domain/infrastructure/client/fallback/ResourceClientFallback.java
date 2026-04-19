@@ -5,7 +5,6 @@ import madp.appdeployment.domain.infrastructure.client.ResourceClient;
 import madp.appdeployment.domain.infrastructure.client.request.AppDeploymentRequestDto;
 import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
 import madp.appdeployment.domain.infrastructure.client.request.CreateSecretRequestDto;
-import madp.appdeployment.domain.infrastructure.client.request.DeleteSecretRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppRevisionResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.DeleteAppDeploymentResponseDto;
@@ -51,8 +50,4 @@ public class ResourceClientFallback implements ResourceClient {
         throw new ProjectServiceUnavailableException();
     }
 
-    @Override
-    public void deleteSecret(String projectId, String appName, DeleteSecretRequestDto request) {
-        throw new ProjectServiceUnavailableException();
-    }
 }
