@@ -4,10 +4,13 @@ import jakarta.validation.Valid;
 import madp.appdeployment.domain.infrastructure.client.fallback.ResourceClientFallback;
 import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
 import madp.appdeployment.domain.infrastructure.client.request.AppDeploymentRequestDto;
+import madp.appdeployment.domain.infrastructure.client.request.CreateSecretRequestDto;
+import madp.appdeployment.domain.infrastructure.client.request.DeleteSecretRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppRevisionResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.DeleteAppDeploymentResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseDto;
+import madp.appdeployment.domain.infrastructure.client.response.SecretCreationResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppBuildLogDetailResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppBuildLogListResponseDto;
 import madp.appdeployment.global.configuration.InternalServiceCommunicationConfiguration;
@@ -42,5 +45,19 @@ public interface ResourceClient {
     ApiResponseDto<DeleteAppDeploymentResponseDto> deleteAppDeployment(
             @PathVariable("project-id") String projectId,
             @PathVariable String name
+    );
+
+    @PostMapping("/apps/{project-id}/{name}/secrets")
+    ApiResponseDto<SecretCreationResponseDto> createSecret(
+            @PathVariable("project-id") String projectId,
+            @PathVariable("name") String appName,
+            @RequestBody CreateSecretRequestDto request
+    );
+
+    @DeleteMapping("/apps/{project-id}/{name}/secrets")
+    void deleteSecret(
+            @PathVariable("project-id") String projectId,
+            @PathVariable("name") String appName,
+            @RequestBody DeleteSecretRequestDto request
     );
 }
