@@ -14,21 +14,105 @@ import madp.appdeployment.domain.presentation.dto.request.JenkinsSuccessTriggerR
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import madp.appdeployment.domain.infrastructure.client.JenkinsClient;
+import madp.appdeployment.domain.infrastructure.client.response.JenkinsBuildsResponse;
+import madp.appdeployment.domain.presentation.dto.response.AppBuildLogDetailResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppBuildLogListResponseDto;
+import madp.appdeployment.global.properties.JenkinsProperties;
+import java.util.Base64;
 import java.util.Collections;
+import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class JenkinsService {
     private static final int MI_PER_GB = 1024;
+    private static final String BUILDS_TREE = "builds[number,result,timestamp,duration,actions[parameters[name,value]]]";
     private final AppDeploymentRepository appDeploymentRepository;
     private final AppDeploymentTagRepository appDeploymentTagRepository;
     private final ResourceClient resourceClient;
+    private final JenkinsClient jenkinsClient;
+    private final JenkinsProperties jenkinsProperties;
+
+    @Transactional(readOnly = true)
+    public AppBuildLogListResponseDto getBuildLogs(String projectId, String appName) {
+        Long appId = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+                .orElseThrow(AppDeploymentNotFoundException::new)
+                .getId();
+
+        String authenticationInfo = getAuthenticationInfo();
+        JenkinsBuildsResponse response = jenkinsClient.getBuilds(BUILDS_TREE, authenticationInfo);
+
+        List<AppBuildLogListResponseDto.AppBuildResponse> filteredBuilds = response.builds().stream()
+                .filter(build -> isBuildForApp(build, appId.toString()))
+                .map(build -> new AppBuildLogListResponseDto.AppBuildResponse(
+                        build.number(),
+                        build.result(),
+                        build.timestamp(),
+                        build.duration()
+                ))
+                .toList();
+
+        return new AppBuildLogListResponseDto(appId.toString(), filteredBuilds);
+    }
+
+    @Transactional(readOnly = true)
+    public AppBuildLogDetailResponseDto getBuildLogDetail(String projectId, String appName, Integer buildNumber) {
+        // 앱 존재 확인
+        appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+                .orElseThrow(AppDeploymentNotFoundException::new);
+
+        String authenticationInfo = getAuthenticationInfo();
+        String logs = jenkinsClient.getConsoleLog(buildNumber, authenticationInfo);
+
+        return new AppBuildLogDetailResponseDto(buildNumber, logs);
+    }
+
+    private String getAuthenticationInfo() {
+        String credentials = jenkinsProperties.getUsername() + ":" + jenkinsProperties.getApiKey();
+        return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
+    }
+
+    private boolean isBuildForApp(JenkinsBuildsResponse.JenkinsBuildResponse build, String targetAppId) {
+        if (build.actions() == null) return false;
+        return build.actions().stream()
+                .filter(action -> action.parameters() != null)
+                .anyMatch(action -> action.parameters().stream()
+                        .anyMatch(p -> "app_id".equals(p.name()) && targetAppId.equals(String.valueOf(p.value())))
+                );
+    }
+
+    @Transactional
+    public void triggerBuild(AppDeploymentEntity appDeploymentEntity) {
+        log.info("[triggerBuild] Jenkins 빌드 트리거 요청 - appId={}, repositoryId={}, branch={}",
+                appDeploymentEntity.getId(),
+                appDeploymentEntity.getGithubRepository().getRepositoryId(),
+                appDeploymentEntity.getGithubBranch());
+
+        String credentials = jenkinsProperties.getUsername() + ":" + jenkinsProperties.getApiKey();
+        String authenticationInfo = "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes());
+        String crumb = jenkinsClient.getCrumb(authenticationInfo).crumb();
+
+        jenkinsClient.triggerJenkins(
+                appDeploymentEntity.getProjectId(),
+                appDeploymentEntity.getId(),
+                appDeploymentEntity.getGithubRepository().getRepositoryFullName(),
+                appDeploymentEntity.getGithubRepository().getRepositoryId(),
+                appDeploymentEntity.getGithubBranch(),
+                authenticationInfo,
+                crumb
+        );
+
+        appDeploymentEntity.updateStatus(AppDeploymentStatus.BUILDING);
+        log.info("[triggerBuild] 완료 - appDeploymentId={}, status=BUILDING", appDeploymentEntity.getId());
+    }
 
     @Transactional
     public void successTrigger(JenkinsSuccessTriggerRequestDto jenkinsSuccessTriggerRequestDto) {
-        log.info("[successTrigger] 요청 - repositoryId={}, tag={}",
-                jenkinsSuccessTriggerRequestDto.repositoryId(), jenkinsSuccessTriggerRequestDto.tag());
+        log.info("[successTrigger] 요청 - repositoryId={}, tag={}, port={}",
+                jenkinsSuccessTriggerRequestDto.repositoryId(), jenkinsSuccessTriggerRequestDto.tag(),
+                jenkinsSuccessTriggerRequestDto.port());
 
         AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findByGithubRepository_RepositoryId(jenkinsSuccessTriggerRequestDto.repositoryId()).orElseThrow(AppDeploymentNotFoundException::new);
 
@@ -47,6 +131,7 @@ public class JenkinsService {
         appDeploymentTagRepository.save(appDeploymentTagEntity);
 
         appDeploymentEntity.upgradeVersion();
+        appDeploymentEntity.updatePort(jenkinsSuccessTriggerRequestDto.port());
 
         String projectId = appDeploymentEntity.getProjectId();
         String imageName = projectId + "/" + jenkinsSuccessTriggerRequestDto.repositoryId();
@@ -59,7 +144,7 @@ public class JenkinsService {
                                 AppDeploymentRequestDto.ContainerDto.builder()
                                         .name(appDeploymentEntity.getName())
                                         .image(imageName + ":" + jenkinsSuccessTriggerRequestDto.tag())
-                                        .ports(Collections.singletonList(appDeploymentEntity.getPort()))
+                                        .ports(Collections.singletonList(jenkinsSuccessTriggerRequestDto.port()))
                                         .resources(
                                                 AppDeploymentRequestDto.ResourcesDto.builder()
                                                         .limits(

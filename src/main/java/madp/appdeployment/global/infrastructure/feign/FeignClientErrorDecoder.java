@@ -3,6 +3,7 @@ package madp.appdeployment.global.infrastructure.feign;
 import feign.Response;
 import feign.codec.ErrorDecoder;
 import madp.appdeployment.global.infrastructure.feign.exception.FeignClientBadRequestException;
+import madp.appdeployment.global.infrastructure.feign.exception.FeignClientNotFoundException;
 import madp.appdeployment.global.infrastructure.feign.exception.FeignClientServiceUnavailableException;
 import madp.appdeployment.global.infrastructure.feign.exception.FeignClientTimeoutException;
 import madp.appdeployment.global.infrastructure.feign.exception.FeignClientUnauthorizedException;
@@ -15,7 +16,10 @@ public class FeignClientErrorDecoder implements ErrorDecoder {
     public Exception decode(String methodKey, Response response) {
         int status = response.status();
 
-        if (status == HttpStatus.UNAUTHORIZED.value()) {
+        if (status == HttpStatus.NOT_FOUND.value()) {
+            throw new FeignClientNotFoundException();
+        }
+        else if (status == HttpStatus.UNAUTHORIZED.value()) {
             throw new FeignClientUnauthorizedException();
         }
         else if (status == HttpStatus.REQUEST_TIMEOUT.value() || status == HttpStatus.GATEWAY_TIMEOUT.value()) {

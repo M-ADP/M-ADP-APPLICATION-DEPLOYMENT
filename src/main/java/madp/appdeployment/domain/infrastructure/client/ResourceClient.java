@@ -1,13 +1,15 @@
 package madp.appdeployment.domain.infrastructure.client;
 
 import jakarta.validation.Valid;
-import madp.appdeployment.domain.infrastructure.client.fallback.ProjectClientFallback;
+import madp.appdeployment.domain.infrastructure.client.fallback.ResourceClientFallback;
 import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
 import madp.appdeployment.domain.infrastructure.client.request.AppDeploymentRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppRevisionResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.DeleteAppDeploymentResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppBuildLogDetailResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppBuildLogListResponseDto;
 import madp.appdeployment.global.configuration.InternalServiceCommunicationConfiguration;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -17,7 +19,7 @@ import java.util.List;
 
 @FeignClient(
         name = "resource-client",
-        fallback = ProjectClientFallback.class,
+        fallback = ResourceClientFallback.class,
         configuration = InternalServiceCommunicationConfiguration.class
 )
 public interface ResourceClient {

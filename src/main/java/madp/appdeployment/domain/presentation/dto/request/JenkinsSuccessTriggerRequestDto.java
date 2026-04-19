@@ -14,5 +14,10 @@ public record JenkinsSuccessTriggerRequestDto(
         @JsonProperty("tag")
         @NotNull(message = "태그는 존재해야합니다.")
         @NotBlank(message = "태그는 존재해야합니다.")
-        String tag
+        String tag,
+
+        @JsonProperty("port")
+        @NotNull(message = "포트는 존재해야합니다.")
+        @Positive(message = "포트는 양수여야 합니다.")
+        Integer port
 ) {}

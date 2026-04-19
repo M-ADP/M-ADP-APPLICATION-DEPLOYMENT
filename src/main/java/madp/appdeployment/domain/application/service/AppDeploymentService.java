@@ -23,12 +23,18 @@ import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseD
 import madp.appdeployment.domain.infrastructure.client.response.ProjectResourceLimitResponseDto;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
+import madp.appdeployment.domain.presentation.dto.response.AppBuildLogDetailResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppBuildLogListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentSummaryResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
+import madp.appdeployment.global.exception.service.ExternalServiceUnavailableException;
+import madp.appdeployment.global.infrastructure.feign.exception.FeignClientNotFoundException;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
+import madp.appdeployment.domain.application.event.GithubRepoLinkedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,13 +54,13 @@ public class AppDeploymentService {
     private final ProjectClient projectClient;
     private final ResourceClient resourceClient;
     private final ProjectResourceLockManager projectResourceLockManager;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Long createAppDeployment(CreateAppDeploymentRequestDto createAppDeploymentRequestDto) {
-        log.info("[createAppDeployment] 요청 - projectId={}, name={}, port={}, cpu={}, memory={}, disk={}",
+        log.info("[createAppDeployment] 요청 - projectId={}, name={}, cpu={}, memory={}, disk={}",
                 createAppDeploymentRequestDto.projectId(),
                 createAppDeploymentRequestDto.name(),
-                createAppDeploymentRequestDto.port(),
                 createAppDeploymentRequestDto.cpu(),
                 createAppDeploymentRequestDto.memory(),
                 createAppDeploymentRequestDto.disk());
@@ -74,7 +80,6 @@ public class AppDeploymentService {
 
             AppDeploymentEntity appDeploymentEntity = AppDeploymentEntity.builder()
                     .name(createAppDeploymentRequestDto.name())
-                    .port(createAppDeploymentRequestDto.port())
                     .projectId(createAppDeploymentRequestDto.projectId())
                     .resourceInfo(resourceInfo)
                     .build();
@@ -102,8 +107,11 @@ public class AppDeploymentService {
         }
 
         // AppDeployment 삭제 시, 관련된 리소스(jenkins) 해제
-        resourceClient.deleteAppDeployment(appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
-        log.info("[deleteAppDeployment] 리소스 삭제 요청 완료 - projectId={}, name={}", appDeploymentEntity.getProjectId(), appDeploymentEntity.getName());
+        deleteResourceSafely(appDeploymentEntity);
+
+        // GitHub Repository 연결 해제 (GithubAllowedRepoEntity는 시스템 엔티티이므로 삭제하지 않음)
+        appDeploymentEntity.disconnectGithubRepository();
+        log.info("[deleteAppDeployment] GitHub Repository 연결 해제 완료 - appDeploymentId={}", appDeploymentId);
 
         appDeploymentRepository.delete(appDeploymentEntity);
         log.info("[deleteAppDeployment] 완료 - appDeploymentId={}", appDeploymentId);
@@ -118,18 +126,35 @@ public class AppDeploymentService {
         log.info("[deleteAppDeploymentListByProjectId] 조회된 앱 수 - projectId={}, count={}", projectIdValue, appDeployments.size());
 
         for (AppDeploymentEntity appDeployment : appDeployments) {
-            if (appDeployment.getStatus() == AppDeploymentStatus.PENDING) {
-                log.info("[deleteAppDeploymentListByProjectId] PENDING 상태 앱 건너뛰기 - projectId={}, name={}",
-                        appDeployment.getProjectId(), appDeployment.getName());
-                continue;
-            }
-            resourceClient.deleteAppDeployment(appDeployment.getProjectId(), appDeployment.getName());
-            log.info("[deleteAppDeploymentListByProjectId] 리소스 삭제 요청 완료 - projectId={}, name={}",
-                    appDeployment.getProjectId(), appDeployment.getName());
+            deleteResourceSafely(appDeployment);
         }
+
+        // GitHub Repository 연결 일괄 해제 (GithubAllowedRepoEntity는 시스템 엔티티이므로 삭제하지 않음)
+        appDeploymentRepository.disconnectGithubRepositoriesByProjectId(projectIdValue);
+        log.info("[deleteAppDeploymentListByProjectId] GitHub Repository 연결 해제 완료 - projectId={}", projectIdValue);
 
         appDeploymentRepository.deleteAll(appDeployments);
         log.info("[deleteAppDeploymentListByProjectId] 완료 - projectId={}, deletedCount={}", projectIdValue, appDeployments.size());
+    }
+
+    private void deleteResourceSafely(AppDeploymentEntity appDeployment) {
+        if (appDeployment.isPending()) {
+            log.info("[deleteResourceSafely] PENDING 상태 앱 건너뛰기 - projectId={}, name={}",
+                    appDeployment.getProjectId(), appDeployment.getName());
+            return;
+        }
+
+        try {
+            resourceClient.deleteAppDeployment(appDeployment.getProjectId(), appDeployment.getName());
+            log.info("[deleteResourceSafely] 리소스 삭제 요청 완료 - projectId={}, name={}",
+                    appDeployment.getProjectId(), appDeployment.getName());
+        } catch (FeignClientNotFoundException e) {
+            log.warn("[deleteResourceSafely] 리소스를 찾을 수 없음 (이미 삭제되었을 수 있음) - projectId={}, name={}",
+                    appDeployment.getProjectId(), appDeployment.getName());
+        } catch (Exception e) {
+            log.error("[deleteResourceSafely] 리소스 삭제 중 오류 발생 - projectId={}, name={}",
+                    appDeployment.getProjectId(), appDeployment.getName(), e);
+        }
     }
 
     @Transactional
@@ -224,6 +249,10 @@ public class AppDeploymentService {
 
         appDeploymentEntity.uploadGithubInfo(updateGithubInfoRequestDto.branch(), githubAllowedRepoEntity);
         log.info("[updateGithubInfo] 완료 - appDeploymentId={}, repositoryFullName={}", updateGithubInfoRequestDto.appDeploymentId(), repositoryFullName);
+
+        // Jenkins 빌드 트리거를 위해 이벤트 발행
+        eventPublisher.publishEvent(new GithubRepoLinkedEvent(appDeploymentEntity));
+        log.info("[updateGithubInfo] GithubRepoLinkedEvent 발행 완료 - appDeploymentId={}", appDeploymentEntity.getId());
     }
 
     @Transactional(readOnly = true)

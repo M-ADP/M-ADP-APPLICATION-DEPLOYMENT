@@ -2,6 +2,7 @@ package madp.appdeployment.domain.infrastructure.client.fallback;
 
 import madp.appdeployment.domain.exception.JenkinsUnavailableException;
 import madp.appdeployment.domain.infrastructure.client.JenkinsClient;
+import madp.appdeployment.domain.infrastructure.client.response.JenkinsBuildsResponse;
 import madp.appdeployment.domain.infrastructure.client.response.JenkinsCrumbResponseDto;
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,16 @@ public class JenkinsClientFallback implements JenkinsClient {
 
     @Override
     public JenkinsCrumbResponseDto getCrumb(String authorization) {
+        throw new JenkinsUnavailableException();
+    }
+
+    @Override
+    public JenkinsBuildsResponse getBuilds(String tree, String authorization) {
+        throw new JenkinsUnavailableException();
+    }
+
+    @Override
+    public String getConsoleLog(Integer buildNumber, String authorization) {
         throw new JenkinsUnavailableException();
     }
 }
