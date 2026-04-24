@@ -4,6 +4,7 @@ import madp.appdeployment.domain.exception.ProjectServiceUnavailableException;
 import madp.appdeployment.domain.infrastructure.client.ResourceClient;
 import madp.appdeployment.domain.infrastructure.client.request.AppDeploymentRequestDto;
 import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
+import madp.appdeployment.domain.infrastructure.client.request.UpdateAppImageRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppRevisionResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.DeleteAppDeploymentResponseDto;
@@ -35,6 +36,11 @@ public class ResourceClientFallback implements ResourceClient {
 
     @Override
     public ApiResponseDto<AppRevisionResponseDto> reviseApp(AppRevisionRequestDto appRevisionRequestDto) {
+        throw new ProjectServiceUnavailableException();
+    }
+
+    @Override
+    public void updateAppImage(String projectId, String name, UpdateAppImageRequestDto updateAppImageRequestDto) {
         throw new ProjectServiceUnavailableException();
     }
 

@@ -10,7 +10,9 @@ import madp.appdeployment.domain.domain.repository.AppDeploymentRepository;
 import madp.appdeployment.domain.domain.repository.GithubAllowedRepoRepository;
 import madp.appdeployment.domain.domain.repository.dto.ProjectResourceUsageSumDto;
 import madp.appdeployment.domain.domain.vo.ResourceInfo;
+import madp.appdeployment.domain.domain.repository.AppDeploymentTagRepository;
 import madp.appdeployment.domain.exception.AppDeploymentNotFoundException;
+import madp.appdeployment.domain.exception.AppDeploymentVersionNotFoundException;
 import madp.appdeployment.domain.exception.GithubAllowedRepoNotFoundException;
 import madp.appdeployment.domain.exception.InvalidAppDeploymentException;
 import madp.appdeployment.domain.exception.InvalidResourceInfoException;
@@ -18,6 +20,7 @@ import madp.appdeployment.domain.exception.ProjectAccessDeniedException;
 import madp.appdeployment.domain.infrastructure.client.ProjectClient;
 import madp.appdeployment.domain.infrastructure.client.ResourceClient;
 import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
+import madp.appdeployment.domain.infrastructure.client.request.UpdateAppImageRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.PodLogsResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.ProjectResourceLimitResponseDto;
@@ -50,6 +53,7 @@ import java.util.stream.Collectors;
 public class AppDeploymentService {
     private static final int MI_PER_GB = 1024;
     private final AppDeploymentRepository appDeploymentRepository;
+    private final AppDeploymentTagRepository appDeploymentTagRepository;
     private final GithubAllowedRepoRepository githubAllowedRepoRepository;
     private final ProjectClient projectClient;
     private final ResourceClient resourceClient;
@@ -429,6 +433,43 @@ public class AppDeploymentService {
         log.info("[getDetailsProjectIdAndAppName] 완료 - projectId={}, appName={}, status={}, resourceUsePercentage={}",
                 projectId, appName, result.status(), result.resourceUsePercentage());
         return result;
+    }
+
+    @Transactional
+    public void updateAppVersion(Long appDeploymentId, Integer version) {
+        log.info("[updateAppVersion] 요청 - appDeploymentId={}, version={}", appDeploymentId, version);
+
+        AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(appDeploymentId)
+                .orElseThrow(AppDeploymentNotFoundException::new);
+
+        if (!projectClient.getProjectOwner(appDeploymentEntity.getProjectId()).data().status()) {
+            log.warn("[updateAppVersion] 프로젝트 오너 권한 없음 - projectId={}", appDeploymentEntity.getProjectId());
+            throw new ProjectAccessDeniedException();
+        }
+
+        String tag = appDeploymentTagRepository
+                .findByAppDeployment_IdAndVersion(appDeploymentId, version)
+                .orElseThrow(AppDeploymentVersionNotFoundException::new)
+                .getTag();
+
+        String image = appDeploymentEntity.getProjectId()
+                + "/" + appDeploymentEntity.getGithubRepository().getRepositoryId()
+                + ":" + tag;
+
+        resourceClient.updateAppImage(
+                appDeploymentEntity.getProjectId(),
+                appDeploymentEntity.getName(),
+                UpdateAppImageRequestDto.builder()
+                        .containers(Collections.singletonList(
+                                UpdateAppImageRequestDto.ContainerDto.builder()
+                                        .name(appDeploymentEntity.getName())
+                                        .image(image)
+                                        .build()
+                        ))
+                        .build()
+        );
+
+        log.info("[updateAppVersion] 완료 - appDeploymentId={}, version={}, image={}", appDeploymentId, version, image);
     }
 
     private int calculateWeightedResourceUsage(int memoryPercentage, int cpuPercentage, int diskPercentage) {

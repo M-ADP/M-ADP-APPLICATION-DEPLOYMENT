@@ -7,6 +7,7 @@ import madp.appdeployment.domain.domain.vo.ResourceInfo;
 import madp.appdeployment.domain.presentation.dto.request.CreateAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.DeleteAppDeploymentRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.GetAppDeploymentSummaryRequestDto;
+import madp.appdeployment.domain.presentation.dto.request.UpdateAppVersionRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoRequestDto;
 import madp.appdeployment.domain.presentation.dto.request.UpdateResourceInfoRequestDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
@@ -39,6 +40,17 @@ public class AppDeploymentController {
                         appDeploymentService.createAppDeployment(createAppDeploymentRequestDto)
                 )
         );
+    }
+
+    @PatchMapping("/version")
+    public ResponseEntity<Void> updateAppVersion(
+            @Valid @RequestBody UpdateAppVersionRequestDto updateAppVersionRequestDto
+    ) {
+        appDeploymentService.updateAppVersion(
+                updateAppVersionRequestDto.appDeploymentId(),
+                updateAppVersionRequestDto.version()
+        );
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/github")

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import madp.appdeployment.domain.infrastructure.client.fallback.ResourceClientFallback;
 import madp.appdeployment.domain.infrastructure.client.request.AppRevisionRequestDto;
 import madp.appdeployment.domain.infrastructure.client.request.AppDeploymentRequestDto;
+import madp.appdeployment.domain.infrastructure.client.request.UpdateAppImageRequestDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppDeploymentResourceStatusResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.AppRevisionResponseDto;
 import madp.appdeployment.domain.infrastructure.client.response.DeleteAppDeploymentResponseDto;
@@ -37,6 +38,13 @@ public interface ResourceClient {
 
     @PatchMapping("/apps")
     ApiResponseDto<AppRevisionResponseDto> reviseApp(@RequestBody @Valid AppRevisionRequestDto appRevisionRequestDto);
+
+    @PatchMapping("/apps/{projectId}/{name}/image")
+    void updateAppImage(
+            @PathVariable String projectId,
+            @PathVariable String name,
+            @RequestBody @Valid UpdateAppImageRequestDto updateAppImageRequestDto
+    );
 
     @DeleteMapping("/apps/{project-id}/{name}")
     ApiResponseDto<DeleteAppDeploymentResponseDto> deleteAppDeployment(
