@@ -29,6 +29,7 @@ import madp.appdeployment.domain.presentation.dto.request.UpdateGithubInfoReques
 import madp.appdeployment.domain.presentation.dto.response.AppBuildLogDetailResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppBuildLogListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentVersionResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentSummaryResponseDto;
@@ -432,6 +433,30 @@ public class AppDeploymentService {
 
         log.info("[getDetailsProjectIdAndAppName] 완료 - projectId={}, appName={}, status={}, resourceUsePercentage={}",
                 projectId, appName, result.status(), result.resourceUsePercentage());
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppDeploymentVersionResponseDto> getAppVersions(Long appDeploymentId) {
+        log.info("[getAppVersions] 요청 - appDeploymentId={}", appDeploymentId);
+
+        AppDeploymentEntity appDeploymentEntity = appDeploymentRepository.findById(appDeploymentId)
+                .orElseThrow(AppDeploymentNotFoundException::new);
+
+        if (!projectClient.getProjectAvailable(appDeploymentEntity.getProjectId()).data().status()) {
+            log.warn("[getAppVersions] 프로젝트 접근 권한 없음 - projectId={}", appDeploymentEntity.getProjectId());
+            throw new ProjectAccessDeniedException();
+        }
+
+        List<AppDeploymentVersionResponseDto> result = appDeploymentTagRepository
+                .findAllByAppDeployment_IdOrderByVersionDesc(appDeploymentId)
+                .stream()
+                .map(tag -> AppDeploymentVersionResponseDto.builder()
+                        .version(tag.getVersion())
+                        .build())
+                .toList();
+
+        log.info("[getAppVersions] 완료 - appDeploymentId={}, count={}", appDeploymentId, result.size());
         return result;
     }
 

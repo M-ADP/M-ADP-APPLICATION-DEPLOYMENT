@@ -14,6 +14,7 @@ import madp.appdeployment.domain.presentation.dto.response.AppDeploymentInfoResp
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentStatusResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppDeploymentSummaryResponseDto;
+import madp.appdeployment.domain.presentation.dto.response.AppDeploymentVersionResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppResourceStatusResponseDto;
 import madp.appdeployment.global.presentation.dto.response.ApiResponseDto;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +39,18 @@ public class AppDeploymentController {
                 ApiResponseDto.of(
                         "애플리케이션이 생성되었습니다.",
                         appDeploymentService.createAppDeployment(createAppDeploymentRequestDto)
+                )
+        );
+    }
+
+    @GetMapping("/version")
+    public ResponseEntity<ApiResponseDto<List<AppDeploymentVersionResponseDto>>> getAppVersions(
+            @RequestParam(value = "app_deployment_id") Long appDeploymentId
+    ) {
+        return ResponseEntity.ok(
+                ApiResponseDto.of(
+                        "버전 목록을 조회했습니다.",
+                        appDeploymentService.getAppVersions(appDeploymentId)
                 )
         );
     }
