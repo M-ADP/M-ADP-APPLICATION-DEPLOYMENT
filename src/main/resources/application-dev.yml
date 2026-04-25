@@ -44,6 +44,10 @@ spring:
             url: ${GITHUB_SERVICE_URL}
             connect-timeout: 5000
             read-timeout: 10000
+          monitoring-client:
+            url: ${MONITORING_SERVICE_URL}
+            connect-timeout: 5000
+            read-timeout: 10000
 
 github:
   webhook:
