@@ -373,8 +373,23 @@ public class AppDeploymentService {
         AppDeploymentEntity appDeploymentEntityForStatus = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
-        AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto =
-                resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).data().getFirst();
+        List<AppDeploymentResourceStatusResponseDto.AppResourceDto> resourceList =
+                resourceClient.getAppDeploymentResourceStatus(projectId, Collections.singletonList(appName)).data();
+
+        if (resourceList == null || resourceList.isEmpty()) {
+            return AppResourceStatusResponseDto.builder()
+                    .appId(appDeploymentEntityForStatus.getId())
+                    .cpuUsagePercentage(0)
+                    .memoryUsed(0)
+                    .memoryTotal(0)
+                    .diskUsed(0)
+                    .diskTotal(0)
+                    .currentInstances(0)
+                    .availableInstances(0)
+                    .build();
+        }
+
+        AppDeploymentResourceStatusResponseDto.AppResourceDto appResourceDto = resourceList.getFirst();
 
         AppResourceStatusResponseDto result = AppResourceStatusResponseDto.builder()
                     .appId(appDeploymentEntityForStatus.getId())
