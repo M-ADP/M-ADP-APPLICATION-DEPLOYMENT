@@ -22,6 +22,7 @@ public interface JenkinsClient {
             @RequestParam("repository_full_name") String repositoryFullName,
             @RequestParam("repository_id") Long repositoryId,
             @RequestParam("branch") String branch,
+            @RequestParam("installation_id") Long installationId,
             @RequestHeader("Authorization") String authorization,
             @RequestHeader("Jenkins-Crumb") String crumb
     );

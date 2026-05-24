@@ -100,6 +100,7 @@ public class JenkinsService {
                 appDeploymentEntity.getGithubRepository().getRepositoryFullName(),
                 appDeploymentEntity.getGithubRepository().getRepositoryId(),
                 appDeploymentEntity.getGithubBranch(),
+                appDeploymentEntity.getGithubRepository().getInstallation().getInstallationId(),
                 authenticationInfo,
                 crumb
         );
