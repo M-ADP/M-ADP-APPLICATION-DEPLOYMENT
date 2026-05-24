@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 public class JenkinsClientFallback implements JenkinsClient {
 
     @Override
-    public void triggerJenkins(String projectId, Long appId, String repositoryFullName, Long repositoryId, String branch, String authorization, String crumb) {
+    public void triggerJenkins(String projectId, Long appId, String repositoryFullName, Long repositoryId, String branch, Long installationId, String authorization, String crumb) {
         throw new JenkinsUnavailableException();
     }
 
