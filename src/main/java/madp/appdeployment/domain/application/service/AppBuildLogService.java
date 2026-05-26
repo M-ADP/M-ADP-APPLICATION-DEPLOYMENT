@@ -2,7 +2,9 @@ package madp.appdeployment.domain.application.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.domain.repository.AppDeploymentRepository;
+import madp.appdeployment.domain.domain.repository.AppDeploymentSecretRepository;
 import madp.appdeployment.domain.exception.AppDeploymentNotFoundException;
 import madp.appdeployment.domain.exception.AppBuildNotFoundException;
 import madp.appdeployment.domain.infrastructure.client.JenkinsClient;
@@ -11,6 +13,7 @@ import madp.appdeployment.domain.presentation.dto.response.AppBuildLogDetailResp
 import madp.appdeployment.domain.presentation.dto.response.AppBuildLogListResponseDto;
 import madp.appdeployment.domain.presentation.dto.response.AppLatestBuildLogResponseDto;
 import madp.appdeployment.global.properties.JenkinsProperties;
+import madp.appdeployment.global.util.BuildLogMaskingUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +29,7 @@ public class AppBuildLogService {
     private static final String BUILDS_TREE = "builds[number,result,timestamp,duration,actions[parameters[name,value]]]";
 
     private final AppDeploymentRepository appDeploymentRepository;
+    private final AppDeploymentSecretRepository appDeploymentSecretRepository;
     private final JenkinsClient jenkinsClient;
     private final JenkinsProperties jenkinsProperties;
 
@@ -43,19 +47,21 @@ public class AppBuildLogService {
 
     @Transactional(readOnly = true)
     public AppBuildLogDetailResponseDto getBuildLogDetail(String projectId, String appName, Integer buildNumber) {
-        appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+        AppDeploymentEntity app = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
                 .orElseThrow(AppDeploymentNotFoundException::new);
 
         String logs = jenkinsClient.getConsoleLog(buildNumber, authorization());
+        String maskedLogs = applyMasking(logs, app.getId());
+
         log.info("[getBuildLogDetail] projectId={}, appName={}, buildNumber={}", projectId, appName, buildNumber);
-        return new AppBuildLogDetailResponseDto(buildNumber, logs);
+        return new AppBuildLogDetailResponseDto(buildNumber, maskedLogs);
     }
 
     @Transactional(readOnly = true)
     public AppLatestBuildLogResponseDto getLatestBuildLog(String projectId, String appName) {
-        Long appId = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
-                .orElseThrow(AppDeploymentNotFoundException::new)
-                .getId();
+        AppDeploymentEntity app = appDeploymentRepository.findByProjectIdAndName(projectId, appName)
+                .orElseThrow(AppDeploymentNotFoundException::new);
+        Long appId = app.getId();
 
         List<AppBuildLogListResponseDto.AppBuildResponse> builds = fetchFilteredBuilds(appId.toString());
 
@@ -64,6 +70,8 @@ public class AppBuildLogService {
                 .orElseThrow(AppBuildNotFoundException::new);
 
         String logs = jenkinsClient.getConsoleLog(latest.number(), authorization());
+        String maskedLogs = applyMasking(logs, appId);
+
         log.info("[getLatestBuildLog] projectId={}, appName={}, appId={}, buildNumber={}", projectId, appName, appId, latest.number());
 
         return new AppLatestBuildLogResponseDto(
@@ -72,8 +80,16 @@ public class AppBuildLogService {
                 latest.result(),
                 latest.timestamp(),
                 latest.duration(),
-                logs
+                maskedLogs
         );
+    }
+
+    private String applyMasking(String logs, Long appId) {
+        List<String> secretValues = appDeploymentSecretRepository.findAllByAppDeploymentId(appId)
+                .stream()
+                .map(madp.appdeployment.domain.domain.entity.AppDeploymentSecretEntity::getValue)
+                .toList();
+        return BuildLogMaskingUtil.maskSecretValues(BuildLogMaskingUtil.mask(logs), secretValues);
     }
 
     private List<AppBuildLogListResponseDto.AppBuildResponse> fetchFilteredBuilds(String targetAppId) {
