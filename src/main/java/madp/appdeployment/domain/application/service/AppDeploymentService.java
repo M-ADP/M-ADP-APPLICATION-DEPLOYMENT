@@ -3,6 +3,7 @@ package madp.appdeployment.domain.application.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import madp.appdeployment.domain.application.support.ProjectResourceLockManager;
+import madp.appdeployment.domain.application.support.ResourceLimitValidator;
 import madp.appdeployment.domain.domain.entity.AppDeploymentEntity;
 import madp.appdeployment.domain.domain.entity.GithubAllowedRepoEntity;
 import madp.appdeployment.domain.domain.enums.AppDeploymentStatus;
@@ -59,6 +60,7 @@ public class AppDeploymentService {
     private final ProjectClient projectClient;
     private final ResourceClient resourceClient;
     private final ProjectResourceLockManager projectResourceLockManager;
+    private final ResourceLimitValidator resourceLimitValidator;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -69,6 +71,12 @@ public class AppDeploymentService {
                 createAppDeploymentRequestDto.cpu(),
                 createAppDeploymentRequestDto.memory(),
                 createAppDeploymentRequestDto.disk());
+
+        resourceLimitValidator.validate(
+                createAppDeploymentRequestDto.cpu(),
+                createAppDeploymentRequestDto.memory(),
+                createAppDeploymentRequestDto.disk()
+        );
 
         return projectResourceLockManager.executeWithLock(createAppDeploymentRequestDto.projectId(), () -> {
             if(!projectClient.getProjectOwner(createAppDeploymentRequestDto.projectId()).data().status()) {
@@ -166,6 +174,8 @@ public class AppDeploymentService {
     public void updateAppDeploymentResourceInfo(Long appDeploymentId, ResourceInfo resourceInfo) {
         log.info("[updateAppDeploymentResourceInfo] 요청 - appDeploymentId={}, cpu={}, memory={}, disk={}",
                 appDeploymentId, resourceInfo.getCpu(), resourceInfo.getMemory(), resourceInfo.getDisk());
+
+        resourceLimitValidator.validate(resourceInfo.getCpu(), resourceInfo.getMemory(), resourceInfo.getDisk());
 
         String projectId = appDeploymentRepository.findProjectIdById(appDeploymentId)
                 .orElseThrow(AppDeploymentNotFoundException::new);
