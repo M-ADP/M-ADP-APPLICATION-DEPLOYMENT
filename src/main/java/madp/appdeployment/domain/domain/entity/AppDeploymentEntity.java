@@ -61,6 +61,9 @@ public class AppDeploymentEntity extends BaseEntity {
     @OneToMany(mappedBy = "appDeployment", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<AppDeploymentTagEntity> tags = new ArrayList<>();
 
+    @OneToMany(mappedBy = "appDeployment", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<AppDeploymentSecretEntity> secrets = new ArrayList<>();
+
     @Builder
     public AppDeploymentEntity(String name, String projectId, ResourceInfo resourceInfo) {
         validateFields(name, projectId, resourceInfo);
